@@ -18,6 +18,7 @@ public:
   void Draw ();
 
 private:
+  void InitiateValues ();
   void UpdateRaw ();
   void UpdateRef ();
   void UpdateSample ();

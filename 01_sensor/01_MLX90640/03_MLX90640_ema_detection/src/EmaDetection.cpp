@@ -48,7 +48,19 @@ void EmaDetection::Setup () {
 
   //Once EEPROM has been read at 400kHz we can increase to 1MHz
   Wire.setClock(1000000); //Teensy will now run I2C at 800kHz (because of clock division)
+  delay(1000);
+  InitiateValues();
+}
 
+void EmaDetection::InitiateValues () {
+  // XXX
+  UpdateRaw();
+  UpdateRaw();
+  for (int i = 0; i < VALUE_COUNT; i++) {
+    double value = static_cast<double>(rawValues[i]);
+    refEmaValues[i] = value;
+    sampleEmaValues[i] = value;
+  }
 }
 
 void EmaDetection::Update () {
