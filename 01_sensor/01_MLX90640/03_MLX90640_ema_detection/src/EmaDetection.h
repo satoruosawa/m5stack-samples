@@ -1,5 +1,5 @@
-#ifndef EMA_H_
-#define EMA_H_
+#ifndef EMA_DETECTION_H_
+#define EMA_DETECTION_H_
 
 #include "./library/MLX90640_API.h"
 #include "./library/MLX90640_I2C_Driver.h"
@@ -10,22 +10,29 @@
 #define Y_COUNT 24
 #define VALUE_COUNT 768 // 32 * 24
 
-class Ema {
+class EmaDetection {
 public:
-  Ema ();
+  EmaDetection ();
   void Setup ();
   void Update ();
   void Draw ();
 
 private:
   void UpdateRaw ();
-  void UpdateEma ();
+  void UpdateRef ();
+  void UpdateSample ();
+  void UpdateDiff ();
   boolean isConnected ();
   const byte mlx90640Address;
   float * rawValues;
-  double * emaValues;
-  const double coef;
+  double * refEmaValues;
+  double * sampleEmaValues;
+  double * diffValues;
+  const double refEmaCoef;
+  const double sampleEmaCoef;
   paramsMLX90640 mlx90640;
+  int diffMinIndex;
+  int diffMaxIndex;
 };
 
-#endif EMA_H_
+#endif EMA_DETECTION_H_

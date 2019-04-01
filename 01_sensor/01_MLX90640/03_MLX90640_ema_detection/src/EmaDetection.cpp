@@ -1,15 +1,22 @@
-#include "./Ema.h"
+#include "./EmaDetection.h"
 
-Ema::Ema () : coef(0.1), mlx90640Address(0x33) {
+EmaDetection::EmaDetection ()
+: refEmaCoef(0.01), sampleEmaCoef(0.1), mlx90640Address(0x33) {
+  // Coefs should be below.
+  // refEmaCoef < sampleEmaCoef
   rawValues = new float[VALUE_COUNT];
-  emaValues = new double[VALUE_COUNT];
+  refEmaValues = new double[VALUE_COUNT];
+  sampleEmaValues = new double[VALUE_COUNT];
+  diffValues = new double[VALUE_COUNT];
   for (int i = 0; i < VALUE_COUNT; i++) {
     rawValues[i] = 0;
-    emaValues[i] = 0;
+    refEmaValues[i] = 0;
+    sampleEmaValues[i] = 0;
+    diffValues[i] = 0;
   }
 }
 
-void Ema::Setup () {
+void EmaDetection::Setup () {
   Wire.begin();
   Wire.setClock(400000); //Increase I2C clock speed to 400kHz
   if (isConnected() == false) {
@@ -44,12 +51,14 @@ void Ema::Setup () {
 
 }
 
-void Ema::Update () {
+void EmaDetection::Update () {
   UpdateRaw();
-  UpdateEma();
+  UpdateRef();
+  UpdateSample();
+  UpdateDiff();
 }
 
-void Ema::UpdateRaw () {
+void EmaDetection::UpdateRaw () {
   for (byte x = 0 ; x < 2 ; x++) {
     uint16_t mlx90640Frame[834];
     int status = MLX90640_GetFrameData(mlx90640Address, mlx90640Frame);
@@ -64,27 +73,56 @@ void Ema::UpdateRaw () {
   }
 }
 
-void Ema::UpdateEma () {
+void EmaDetection::UpdateRef () {
   for (int i = 0; i < VALUE_COUNT; i++) {
     double value = static_cast<double>(rawValues[i]);
     if (value < -100 || value > 100) return;
-    emaValues[i] = DoubleLerp(0, emaValues[i], 1, value, coef);
+    refEmaValues[i] = DoubleLerp(0, refEmaValues[i], 1, value, refEmaCoef);
   }
 }
 
-void Ema::Draw () {
+void EmaDetection::UpdateSample () {
+  for (int i = 0; i < VALUE_COUNT; i++) {
+    double value = static_cast<double>(rawValues[i]);
+    if (value < -100 || value > 100) return;
+    sampleEmaValues[i] = DoubleLerp(0, sampleEmaValues[i], 1, value, sampleEmaCoef);
+  }
+}
+
+void EmaDetection::UpdateDiff () {
+  float diffMin = 100;
+  float diffMax = -100;
+  for (int i = 0; i < VALUE_COUNT; i++) {
+    double ref = refEmaValues[i];
+    double sample = sampleEmaValues[i];
+    double diff = sample - ref;
+    diffValues[i] = diff;
+    if (diff < diffMin) {
+      diffMinIndex = i;
+      diffMin = diff;
+    }
+    if (diff > diffMax) {
+      diffMaxIndex = i;
+      diffMax = diff;
+    }
+  }
+}
+
+void EmaDetection::Draw () {
   for (int y = 0; y < 24; y++) {
     for (int x = 0; x < 32; x++) {
       int index = x + y * 32;
-      // float value = FloatMap(rawValues[index], 20, 35, 0, 255);
-      float value = FloatMap(static_cast<float>(emaValues[index]), 20, 35, 0, 255);
+      float min = static_cast<float>(diffValues[diffMinIndex]);
+      float max = static_cast<float>(diffValues[diffMaxIndex]);
+      float diff = static_cast<float>(diffValues[index]);
+      float value = FloatMap(diff, min, max, 0, 255);
       value = constrain(value, 0, 255);
       M5.Lcd.fillRect(x * 10, y * 10, 10, 10, GetColor(value, value, value));
     }
   }
 }
 
-boolean Ema::isConnected () {
+boolean EmaDetection::isConnected () {
   Wire.beginTransmission((uint8_t)mlx90640Address);
   if (Wire.endTransmission() != 0) return false; //Sensor did not ACK
   return true;

@@ -1,14 +1,14 @@
-#include "./Ema.h"
+#include "./EmaDetection.h"
 #include <M5Stack.h>
 #include <Wire.h>
 
-Ema * EMA;
+EmaDetection * EMA;
 
 void setup () {
   Serial.begin(115200);
   while (!Serial); //Wait for user to open terminal
   Serial.println("MLX90640 IR Array Example");
-  EMA = new Ema();
+  EMA = new EmaDetection();
   EMA->Setup();
   M5.begin();
 }
