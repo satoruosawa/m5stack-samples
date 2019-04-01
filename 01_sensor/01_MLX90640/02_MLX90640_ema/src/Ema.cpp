@@ -67,6 +67,7 @@ void Ema::UpdateRaw () {
 void Ema::UpdateEma () {
   for (int i = 0; i < VALUE_COUNT; i++) {
     double value = static_cast<double>(rawValues[i]);
+    if (value < -100 || value > 100) return;
     emaValues[i] = DoubleLerp(0, emaValues[i], 1, value, coef);
   }
 }
