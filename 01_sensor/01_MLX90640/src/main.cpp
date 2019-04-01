@@ -1,26 +1,25 @@
-#include <Arduino.h>
-#include <Wire.h>
 #include "./library/MLX90640_API.h"
 #include "./library/MLX90640_I2C_Driver.h"
-
-const byte MLX90640_address = 0x33; //Default 7-bit unshifted address of the MLX90640
+#include <M5Stack.h>
+#include <Wire.h>
 
 #define TA_SHIFT 8 //Default shift for MLX90640 in open air
 
+boolean isConnected ();
+
+const byte MLX90640_address = 0x33; //Default 7-bit unshifted address of the MLX90640
 static float mlx90640To[768];
 paramsMLX90640 mlx90640;
-boolean isConnected();
 
-void setup() {
+void setup () {
   Wire.begin();
   Wire.setClock(400000); //Increase I2C clock speed to 400kHz
 
-  Serial.begin(9600);
+  Serial.begin(115200);
   while (!Serial); //Wait for user to open terminal
   Serial.println("MLX90640 IR Array Example");
 
-  if (isConnected() == false)
-  {
+  if (isConnected() == false) {
     Serial.println("MLX90640 not detected at default I2C address. Please check wiring. Freezing.");
     while (1);
   }
@@ -40,14 +39,11 @@ void setup() {
   //Once params are extracted, we can release eeMLX90640 array
 }
 
-void loop()
-{
-  for (byte x = 0 ; x < 2 ; x++) //Read both subpages
-  {
+void loop () {
+  for (byte x = 0 ; x < 2 ; x++) {
     uint16_t mlx90640Frame[834];
     int status = MLX90640_GetFrameData(MLX90640_address, mlx90640Frame);
-    if (status < 0)
-    {
+    if (status < 0) {
       Serial.print("GetFrame Error: ");
       Serial.println(status);
     }
@@ -61,8 +57,7 @@ void loop()
     MLX90640_CalculateTo(mlx90640Frame, &mlx90640, emissivity, tr, mlx90640To);
   }
 
-  for (int x = 0 ; x < 10 ; x++)
-  {
+  for (int x = 0 ; x < 10 ; x++) {
     Serial.print("Pixel ");
     Serial.print(x);
     Serial.print(": ");
@@ -75,10 +70,8 @@ void loop()
 }
 
 //Returns true if the MLX90640 is detected on the I2C bus
-boolean isConnected()
-{
+boolean isConnected () {
   Wire.beginTransmission((uint8_t)MLX90640_address);
-  if (Wire.endTransmission() != 0)
-    return (false); //Sensor did not ACK
-  return (true);
+  if (Wire.endTransmission() != 0) return false; //Sensor did not ACK
+  return true;
 }
