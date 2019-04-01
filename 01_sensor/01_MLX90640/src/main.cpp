@@ -6,6 +6,7 @@
 #define TA_SHIFT 8 //Default shift for MLX90640 in open air
 
 boolean isConnected ();
+uint16_t getColor(uint8_t red, uint8_t green, uint8_t blue);
 
 const byte MLX90640_ADDRESS = 0x33; //Default 7-bit unshifted address of the MLX90640
 static float MLX90640_TO[768]; // 32 * 24
@@ -37,6 +38,7 @@ void setup () {
     Serial.println("Parameter extraction failed");
 
   //Once params are extracted, we can release eeMLX90640 array
+  M5.begin();
 }
 
 void loop () {
@@ -57,16 +59,14 @@ void loop () {
     MLX90640_CalculateTo(mlx90640Frame, &MLX90640, emissivity, tr, MLX90640_TO);
   }
 
-  for (int x = 0 ; x < 30 ; x++) {
-    Serial.print("Pixel ");
-    Serial.print(x);
-    Serial.print(": ");
-    Serial.print(MLX90640_TO[x], 2);
-    Serial.print("C");
-    Serial.println();
+  for (int y = 0; y < 24; y++) {
+    for (int x = 0; x < 32; x++) {
+      int index = x + y * 32;
+      float value = map(MLX90640_TO[index], 20, 30, 0, 255);
+      value = constrain(value, 0, 255);
+      M5.Lcd.fillRect(x * 10, y * 10, 10, 10, getColor(value, value, value));
+    }
   }
-
-  delay(1000);
 }
 
 //Returns true if the MLX90640 is detected on the I2C bus
@@ -74,4 +74,8 @@ boolean isConnected () {
   Wire.beginTransmission((uint8_t)MLX90640_ADDRESS);
   if (Wire.endTransmission() != 0) return false; //Sensor did not ACK
   return true;
+}
+
+uint16_t getColor(uint8_t red, uint8_t green, uint8_t blue) {
+  return ((red>>3)<<11) | ((green>>2)<<5) | (blue>>3);
 }
