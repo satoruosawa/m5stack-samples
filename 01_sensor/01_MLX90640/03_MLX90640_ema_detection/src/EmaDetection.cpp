@@ -88,7 +88,7 @@ void EmaDetection::UpdateRaw () {
 void EmaDetection::UpdateRef () {
   for (int i = 0; i < VALUE_COUNT; i++) {
     double value = static_cast<double>(rawValues[i]);
-    if (value < -100 || value > 100) return;
+    if (value < 1 || value > 100) return;
     refEmaValues[i] = DoubleLerp(0, refEmaValues[i], 1, value, refEmaCoef);
   }
 }
@@ -96,7 +96,7 @@ void EmaDetection::UpdateRef () {
 void EmaDetection::UpdateSample () {
   for (int i = 0; i < VALUE_COUNT; i++) {
     double value = static_cast<double>(rawValues[i]);
-    if (value < -100 || value > 100) return;
+    if (value < 1 || value > 100) return;
     sampleEmaValues[i] = DoubleLerp(0, sampleEmaValues[i], 1, value, sampleEmaCoef);
   }
 }
