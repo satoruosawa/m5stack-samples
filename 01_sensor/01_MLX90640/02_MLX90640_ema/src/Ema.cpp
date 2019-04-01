@@ -45,6 +45,11 @@ void Ema::Setup () {
 }
 
 void Ema::Update () {
+  UpdateRaw();
+  UpdateEma();
+}
+
+void Ema::UpdateRaw () {
   for (byte x = 0 ; x < 2 ; x++) {
     uint16_t mlx90640Frame[834];
     int status = MLX90640_GetFrameData(mlx90640Address, mlx90640Frame);
@@ -59,11 +64,19 @@ void Ema::Update () {
   }
 }
 
+void Ema::UpdateEma () {
+  for (int i = 0; i < VALUE_COUNT; i++) {
+    double value = static_cast<double>(rawValues[i]);
+    emaValues[i] = DoubleLerp(0, emaValues[i], 1, value, coef);
+  }
+}
+
 void Ema::Draw () {
   for (int y = 0; y < 24; y++) {
     for (int x = 0; x < 32; x++) {
       int index = x + y * 32;
-      float value = map(rawValues[index], 20, 30, 0, 255);
+      // float value = FloatMap(rawValues[index], 20, 35, 0, 255);
+      float value = FloatMap(static_cast<float>(emaValues[index]), 20, 35, 0, 255);
       value = constrain(value, 0, 255);
       M5.Lcd.fillRect(x * 10, y * 10, 10, 10, GetColor(value, value, value));
     }

@@ -18,6 +18,8 @@ public:
   void Draw ();
 
 private:
+  void UpdateRaw ();
+  void UpdateEma ();
   boolean isConnected ();
   const byte mlx90640Address;
   float * rawValues;
