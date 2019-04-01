@@ -1,1 +1,1 @@
-# samples-for-m5stack
+# m5stack-samples
