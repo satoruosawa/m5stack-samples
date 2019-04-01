@@ -37,18 +37,29 @@ void setup () {
   if (status != 0)
     Serial.println("Parameter extraction failed");
 
+  //Set refresh rate
+  //A rate of 0.5Hz takes 4Sec per reading because we have to read two frames to get complete picture
+  //MLX90640_SetRefreshRate(MLX90640_ADDRESS, 0x00); //Set rate to 0.25Hz effective - Works
+  //MLX90640_SetRefreshRate(MLX90640_ADDRESS, 0x01); //Set rate to 0.5Hz effective - Works
+  //MLX90640_SetRefreshRate(MLX90640_ADDRESS, 0x02); //Set rate to 1Hz effective - Works
+  //MLX90640_SetRefreshRate(MLX90640_ADDRESS, 0x03); //Set rate to 2Hz effective - Works
+  // MLX90640_SetRefreshRate(MLX90640_ADDRESS, 0x04); //Set rate to 4Hz effective - Works
+  MLX90640_SetRefreshRate(MLX90640_ADDRESS, 0x05); //Set rate to 8Hz effective - Works at 800kHz
+  // MLX90640_SetRefreshRate(MLX90640_ADDRESS, 0x06); //Set rate to 16Hz effective - Works at 800kHz
+  // MLX90640_SetRefreshRate(MLX90640_ADDRESS, 0x07); //Set rate to 32Hz effective - fails
+
+  //Once EEPROM has been read at 400kHz we can increase to 1MHz
+  Wire.setClock(1000000); //Teensy will now run I2C at 800kHz (because of clock division)
+
   //Once params are extracted, we can release eeMLX90640 array
   M5.begin();
 }
 
 void loop () {
+  long startTime = millis();
   for (byte x = 0 ; x < 2 ; x++) {
     uint16_t mlx90640Frame[834];
     int status = MLX90640_GetFrameData(MLX90640_ADDRESS, mlx90640Frame);
-    if (status < 0) {
-      Serial.print("GetFrame Error: ");
-      Serial.println(status);
-    }
 
     float vdd = MLX90640_GetVdd(mlx90640Frame, &MLX90640);
     float Ta = MLX90640_GetTa(mlx90640Frame, &MLX90640);
@@ -58,6 +69,8 @@ void loop () {
 
     MLX90640_CalculateTo(mlx90640Frame, &MLX90640, emissivity, tr, MLX90640_TO);
   }
+  long stopReadTime = millis();
+
 
   for (int y = 0; y < 24; y++) {
     for (int x = 0; x < 32; x++) {
@@ -67,6 +80,14 @@ void loop () {
       M5.Lcd.fillRect(x * 10, y * 10, 10, 10, getColor(value, value, value));
     }
   }
+  long stopPrintTime = millis();
+
+  Serial.print("Read rate: ");
+  Serial.print( 1000.0 / (stopReadTime - startTime), 2);
+  Serial.println(" Hz");
+  Serial.print("Read plus print rate: ");
+  Serial.print( 1000.0 / (stopPrintTime - startTime), 2);
+  Serial.println(" Hz");
 }
 
 //Returns true if the MLX90640 is detected on the I2C bus
