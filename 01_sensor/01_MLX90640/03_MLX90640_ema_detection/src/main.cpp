@@ -1,6 +1,4 @@
 #include "./EmaDetection.h"
-#include <M5Stack.h>
-#include <Wire.h>
 
 EmaDetection * EMA;
 
