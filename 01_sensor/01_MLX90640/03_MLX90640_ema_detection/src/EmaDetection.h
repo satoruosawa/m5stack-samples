@@ -4,6 +4,8 @@
 #include "./library/MLX90640_API.h"
 #include "./library/MLX90640_I2C_Driver.h"
 #include "./Modules.h"
+#include <Wire.h>
+#include <M5Stack.h>
 
 #define TA_SHIFT 8 //Default shift for MLX90640 in open air
 #define X_COUNT 32
