@@ -24,6 +24,7 @@ void oscEvent(OscMessage msg) {
     println(msg.get(2).doubleValue());
     print("msg.get(3).stringValue(): ");
     println(msg.get(3).stringValue());
+    // BUG
     // print("msg.get(4).booleanValue(): ");
     // println(msg.get(4).booleanValue());
   }
