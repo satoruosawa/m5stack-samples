@@ -1,7 +1,5 @@
-#include <Arduino.h>
 #include <ArduinoOSC.h>
 #include <M5Stack.h>
-#include <WiFi.h>
 #include "./wifi-info.h"
 
 OscWiFi osc;
