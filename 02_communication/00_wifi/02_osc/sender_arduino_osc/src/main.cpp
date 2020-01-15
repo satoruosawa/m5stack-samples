@@ -2,12 +2,13 @@
 #include <M5Stack.h>
 #include "./wifi-info.h"
 
-OscWiFi osc;
 const String SSID = WIFI_SSID;          // "xxxx"
 const String PASSWORD = WIFI_PASSWORD;  // "xxxx"
 const int PORT = 12000;
 const char* TARGEET_IP = "192.168.8.115";
 const int TARGET_PORT = 10000;
+
+OscWiFi OSC;
 
 void setup() {
   M5.begin();
@@ -21,7 +22,7 @@ void setup() {
   M5.Lcd.print("IP address: ");
   M5.Lcd.println(WiFi.localIP());
 
-  osc.begin(PORT);
+  OSC.begin(PORT);
 }
 
 int count = 0;
@@ -32,8 +33,8 @@ void loop() {
   double d = 78.987;
   String s = "hello";
   bool b = true;
-  osc.send(TARGEET_IP, TARGET_PORT, "/test", count, f, d, s, b);
-  osc.parse();  // should be called
+  OSC.send(TARGEET_IP, TARGET_PORT, "/test", count, f, d, s, b);
+  OSC.parse();  // should be called
 
   M5.Lcd.setCursor(0, 100);
   M5.Lcd.print("Send OSC to [");
