@@ -6,7 +6,7 @@
 const String SSID = WIFI_SSID;          // "xxxx"
 const String PASSWORD = WIFI_PASSWORD;  // "xxxx"
 const int PORT = 12000;
-const char* TARGEET_IP = "192.168.8.115";
+const char* TARGEET_IP = "192.168.8.126";
 const int TARGET_PORT = 10000;
 
 OSCBundle OSC_BUNDLE;
@@ -23,6 +23,7 @@ void setup() {
   M5.Lcd.println(" connected.");
   M5.Lcd.print("IP address: ");
   M5.Lcd.println(WiFi.localIP());
+  M5.Lcd.println("Start sender_osc_bundle.");
   UDP.begin(PORT);
 }
 

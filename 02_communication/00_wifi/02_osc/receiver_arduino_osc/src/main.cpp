@@ -44,6 +44,7 @@ void setup() {
   M5.Lcd.print(WiFi.localIP());
   M5.Lcd.print(" Port: ");
   M5.Lcd.println(PORT);
+  M5.Lcd.println("Start receiver_arduino_osc.");
   osc.begin(PORT);
   osc.subscribe("/test", onOscReceived);
 }
