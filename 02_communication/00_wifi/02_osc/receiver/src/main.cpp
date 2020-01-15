@@ -1,4 +1,3 @@
-#include <Arduino.h>
 #include <ArduinoOSC.h>
 #include <M5Stack.h>
 #include <WiFi.h>
@@ -10,6 +9,7 @@ const String PASSWORD = WIFI_PASSWORD;  // "xxxx"
 const int PORT = 10000;
 
 void onOscReceived(OscMessage& m) {
+  M5.Lcd.setCursor(0, 100);
   M5.Lcd.print("received : ");
   M5.Lcd.print(m.ip());
   M5.Lcd.print(" ");
@@ -23,7 +23,11 @@ void onOscReceived(OscMessage& m) {
   M5.Lcd.print(" ");
   M5.Lcd.print(m.arg<float>(1));
   M5.Lcd.print(" ");
-  M5.Lcd.print(m.arg<String>(2));
+  M5.Lcd.print(m.arg<double>(2));
+  M5.Lcd.print(" ");
+  M5.Lcd.print(m.arg<String>(3));
+  M5.Lcd.print(" ");
+  M5.Lcd.print(m.arg<bool>(4));
   M5.Lcd.println();
 }
 
@@ -38,7 +42,7 @@ void setup() {
   M5.Lcd.println(" connected.");
   M5.Lcd.print("IP address: ");
   M5.Lcd.print(WiFi.localIP());
-  M5.Lcd.print("Port: ");
+  M5.Lcd.print(" Port: ");
   M5.Lcd.println(PORT);
   osc.begin(PORT);
   osc.subscribe("/test", onOscReceived);
