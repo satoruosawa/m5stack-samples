@@ -1,0 +1,1 @@
+- Adafruit_Sensor.h は lib dir に置かないといけない。（main.cppとAdafruit BMP280の双方からの参照問題を避けるため）
