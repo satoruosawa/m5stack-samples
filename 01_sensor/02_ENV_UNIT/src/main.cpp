@@ -1,14 +1,10 @@
-/*
-    note: need add library Adafruit_BMP280 from library manage
-*/
-
 #include <Adafruit_BMP280.h>
 #include <M5Stack.h>
-#include <Wire.h>  //The DHT12 uses I2C comunication.
+#include <Wire.h>
 #include "Adafruit_Sensor.h"
 #include "DHT12.h"
 
-DHT12 dht12;  // Preset scale CELSIUS and ID 0x5c.
+DHT12 dht12;
 Adafruit_BMP280 bme;
 
 void setup() {
