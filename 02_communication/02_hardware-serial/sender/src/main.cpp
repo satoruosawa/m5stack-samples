@@ -1,7 +1,6 @@
-#include <Arduino.h>
 #include <M5Stack.h>
 
-HardwareSerial hardwareSerial(2); // RX, TX
+HardwareSerial hardwareSerial(2);  // RX, TX
 const uint8_t buttonA_GPIO = 39;
 const uint8_t buttonB_GPIO = 38;
 
