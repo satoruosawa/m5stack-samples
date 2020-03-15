@@ -12,11 +12,12 @@ void setup() {
 void loop() {
   int x, y, z;
   adxl.readXYZ(&x, &y, &z);
-  Serial.print("values of X , Y , Z: ");
-  Serial.print(x);
-  Serial.print(" , ");
-  Serial.print(y);
-  Serial.print(" , ");
-  Serial.println(z);
+  M5.Lcd.setCursor(0, 0);
+  M5.Lcd.print("values of X , Y , Z: ");
+  M5.Lcd.print(x);
+  M5.Lcd.print(" , ");
+  M5.Lcd.print(y);
+  M5.Lcd.print(" , ");
+  M5.Lcd.println(z);
   delay(10);
 }
