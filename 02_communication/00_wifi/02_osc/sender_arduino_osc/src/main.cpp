@@ -1,11 +1,12 @@
 #include <ArduinoOSC.h>
 #include <M5Stack.h>
+
 #include "./wifi-info.h"
 
 const String SSID = WIFI_SSID;          // "xxxx"
 const String PASSWORD = WIFI_PASSWORD;  // "xxxx"
 const int PORT = 12000;
-const char* TARGEET_IP = "192.168.8.126";
+const char* TARGEET_IP = "10.0.1.7";
 const int TARGET_PORT = 10000;
 
 OscWiFi OSC;
