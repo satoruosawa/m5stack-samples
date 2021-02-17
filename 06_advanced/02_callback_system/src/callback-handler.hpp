@@ -6,7 +6,6 @@
 class CallbackHandler {
  public:
   CallbackHandler() = default;
-  void Setup();
   void Update();
   void AddCallback(void (*callback)(int));
 

@@ -7,7 +7,6 @@ CallbackHandler CALLBACK_HANDLER;
 
 void setup() {
   M5.begin();
-  CALLBACK_HANDLER.Setup();
   Callback callback;
   CALLBACK_HANDLER.AddCallback(callback.Process);
 }

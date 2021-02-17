@@ -1,7 +1,5 @@
 #include "./callback-handler.hpp"
 
-void CallbackHandler::Setup() {}
-
 void CallbackHandler::AddCallback(void (*callback)(int)) {
   callbacks_.push_back(callback);
 }
