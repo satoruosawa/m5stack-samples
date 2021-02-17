@@ -3,8 +3,6 @@
 
 #include <M5Stack.h>
 
-#include "./callback-handler.hpp"
-
 class Callback {
  public:
   Callback() = default;
