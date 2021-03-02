@@ -1,6 +1,4 @@
 #include <BLEDevice.h>
-#include <BLEServer.h>
-#include <BLEUtils.h>
 #include <M5Stack.h>
 
 #define SERVICE_UUID "00002220-0000-1000-8000-00805F9B34FB"
