@@ -1,12 +1,15 @@
+using System;
 using UnityEngine.Events;
 using UnityEngine;
 
-public class BleReceiver : MonoBehaviour
+public class BleHandler : MonoBehaviour
 {
   public string deviceName = "M5Stack";
   public string serviceUUID = "2220";
-  public string characteristicUUID = "2221";
-  [SerializeField] private UnityEvent receiveEvent = new UnityEvent();
+  public string readCharacteristicUUID = "2221";
+  public string writeCharacteristicUUID = "2222";
+  [Serializable] public class StepEvent : UnityEvent<string> { }
+  [SerializeField] private StepEvent receiveEvent = new StepEvent();
 
   enum States
   {
@@ -78,11 +81,13 @@ public class BleReceiver : MonoBehaviour
   {
     Debug.Log("DataReceived");
     Debug.Log(bytes[0]);
-    receiveEvent.Invoke();
+    string str = System.Text.Encoding.ASCII.GetString(bytes);
+    receiveEvent.Invoke(str);
   }
 
   void Update()
   {
+    // TODO: Refactoring
     if (_timeout > 0f)
     {
       _timeout -= Time.deltaTime;
@@ -165,13 +170,13 @@ public class BleReceiver : MonoBehaviour
             StatusMessage = "Subscribing to characteristics...";
             BluetoothLEHardwareInterface
               .SubscribeCharacteristicWithDeviceAddress(
-                _deviceAddress, serviceUUID, characteristicUUID,
+                _deviceAddress, serviceUUID, readCharacteristicUUID,
                 (notifyAddress, notifyCharacteristic) =>
             {
               StatusMessage = "Waiting for user action (1)...";
               _state = States.None;
               BluetoothLEHardwareInterface.ReadCharacteristic(
-                _deviceAddress, serviceUUID, characteristicUUID,
+                _deviceAddress, serviceUUID, readCharacteristicUUID,
                 (characteristic, bytes) =>
               {
                 DataReceived(bytes);
@@ -188,7 +193,7 @@ public class BleReceiver : MonoBehaviour
             break;
           case States.Unsubscribe:
             BluetoothLEHardwareInterface.UnSubscribeCharacteristic(
-              _deviceAddress, serviceUUID, characteristicUUID, null);
+              _deviceAddress, serviceUUID, readCharacteristicUUID, null);
             SetState(States.Disconnect, 4f);
             break;
           case States.Disconnect:
@@ -234,5 +239,19 @@ public class BleReceiver : MonoBehaviour
     if (uuid2.Length == 4)
       uuid2 = FullUUID(uuid2);
     return (uuid1.ToUpper().Equals(uuid2.ToUpper()));
+  }
+
+  public void SendByte(string value)
+  {
+    // TODO: Connect input field
+    Debug.Log("Send bytes");
+    byte[] data = System.Text.Encoding.ASCII.GetBytes(value);
+    Debug.Log(data);
+    BluetoothLEHardwareInterface.WriteCharacteristic(
+      _deviceAddress, serviceUUID, writeCharacteristicUUID, data, data.Length,
+      true, (characteristicUUID) =>
+    {
+      BluetoothLEHardwareInterface.Log("Write Succeeded");
+    });
   }
 }

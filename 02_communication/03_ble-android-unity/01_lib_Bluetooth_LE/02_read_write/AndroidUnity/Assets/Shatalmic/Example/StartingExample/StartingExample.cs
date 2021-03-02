@@ -10,338 +10,338 @@ using UnityEngine.UI;
 
 public class StartingExample : MonoBehaviour
 {
-    public string DeviceName = "ledbtn";
-    public string ServiceUUID = "A9E90000-194C-4523-A473-5FDF36AA4D20";
-    public string LedUUID = "A9E90001-194C-4523-A473-5FDF36AA4D20";
-    public string ButtonUUID = "A9E90002-194C-4523-A473-5FDF36AA4D20";
+  public string DeviceName = "ledbtn";
+  public string ServiceUUID = "A9E90000-194C-4523-A473-5FDF36AA4D20";
+  public string LedUUID = "A9E90001-194C-4523-A473-5FDF36AA4D20";
+  public string ButtonUUID = "A9E90002-194C-4523-A473-5FDF36AA4D20";
 
-    enum States
+  enum States
+  {
+    None,
+    Scan,
+    ScanRSSI,
+    Connect,
+    RequestMTU,
+    Subscribe,
+    Unsubscribe,
+    Disconnect,
+  }
+
+  private bool _connected = false;
+  private float _timeout = 0f;
+  private States _state = States.None;
+  private string _deviceAddress;
+  private bool _foundButtonUUID = false;
+  private bool _foundLedUUID = false;
+  private bool _rssiOnly = false;
+  private int _rssi = 0;
+
+  public GameObject DeinitializeButton;
+  public Text StatusText;
+  public Text ButtonPositionText;
+
+  private string StatusMessage
+  {
+    set
     {
-        None,
-        Scan,
-        ScanRSSI,
-        Connect,
-        RequestMTU,
-        Subscribe,
-        Unsubscribe,
-        Disconnect,
+      BluetoothLEHardwareInterface.Log(value);
+      StatusText.text = value;
+    }
+  }
+
+  // NOTE: The button that triggers this is for when you are running this code in the macOS
+  // Unity Editor and have the experimental bluetooth support turned on. This is because I
+  // how found it crashes less often when you deinitialize first. You must still use caution
+  // and save your work often as it could still have issues.
+  // MacOS editor support is experimental. I am working on trying to make it work better in
+  // the editor.
+  public void OnDeinitializeButton()
+  {
+    BluetoothLEHardwareInterface.DeInitialize(() =>
+    {
+      StatusMessage = "Deinitialize";
+    });
+  }
+
+  void Reset()
+  {
+    _connected = false;
+    _timeout = 0f;
+    _state = States.None;
+    _deviceAddress = null;
+    _foundButtonUUID = false;
+    _foundLedUUID = false;
+    _rssi = 0;
+  }
+
+  void SetState(States newState, float timeout)
+  {
+    _state = newState;
+    _timeout = timeout;
+  }
+
+  void StartProcess()
+  {
+    Reset();
+    BluetoothLEHardwareInterface.Initialize(true, false, () =>
+    {
+
+      SetState(States.Scan, 0.1f);
+
+    }, (error) =>
+    {
+
+      StatusMessage = "Error during initialize: " + error;
+    });
+  }
+
+  // Use this for initialization
+  void Start()
+  {
+    if (DeinitializeButton != null)
+    {
+      DeinitializeButton.SetActive(Application.isEditor);
     }
 
-    private bool _connected = false;
-    private float _timeout = 0f;
-    private States _state = States.None;
-    private string _deviceAddress;
-    private bool _foundButtonUUID = false;
-    private bool _foundLedUUID = false;
-    private bool _rssiOnly = false;
-    private int _rssi = 0;
+    StartProcess();
+  }
 
-    public GameObject DeinitializeButton;
-    public Text StatusText;
-    public Text ButtonPositionText;
+  private void ProcessButton(byte[] bytes)
+  {
+    if (bytes[0] == 0x00)
+      ButtonPositionText.text = "Not Pushed";
+    else
+      ButtonPositionText.text = "Pushed";
+  }
 
-    private string StatusMessage
+  // Update is called once per frame
+  void Update()
+  {
+    if (_timeout > 0f)
     {
-        set
-        {
-            BluetoothLEHardwareInterface.Log(value);
-            StatusText.text = value;
-        }
-    }
-
-    // NOTE: The button that triggers this is for when you are running this code in the macOS
-    // Unity Editor and have the experimental bluetooth support turned on. This is because I
-    // how found it crashes less often when you deinitialize first. You must still use caution
-    // and save your work often as it could still have issues.
-    // MacOS editor support is experimental. I am working on trying to make it work better in
-    // the editor.
-    public void OnDeinitializeButton()
-    {
-        BluetoothLEHardwareInterface.DeInitialize(() =>
-        {
-            StatusMessage = "Deinitialize";
-        });
-    }
-
-    void Reset()
-    {
-        _connected = false;
+      _timeout -= Time.deltaTime;
+      if (_timeout <= 0f)
+      {
         _timeout = 0f;
-        _state = States.None;
-        _deviceAddress = null;
-        _foundButtonUUID = false;
-        _foundLedUUID = false;
-        _rssi = 0;
-    }
 
-    void SetState(States newState, float timeout)
-    {
-        _state = newState;
-        _timeout = timeout;
-    }
-
-    void StartProcess()
-    {
-        Reset();
-        BluetoothLEHardwareInterface.Initialize(true, false, () =>
+        switch (_state)
         {
+          case States.None:
+            break;
 
-            SetState(States.Scan, 0.1f);
+          case States.Scan:
+            StatusMessage = "Scanning for " + DeviceName;
 
-        }, (error) =>
-        {
-
-            StatusMessage = "Error during initialize: " + error;
-        });
-    }
-
-    // Use this for initialization
-    void Start()
-    {
-        if (DeinitializeButton != null)
-        {
-            DeinitializeButton.SetActive(Application.isEditor);
-        }
-
-        StartProcess();
-    }
-
-    private void ProcessButton(byte[] bytes)
-    {
-        if (bytes[0] == 0x00)
-            ButtonPositionText.text = "Not Pushed";
-        else
-            ButtonPositionText.text = "Pushed";
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        if (_timeout > 0f)
-        {
-            _timeout -= Time.deltaTime;
-            if (_timeout <= 0f)
+            BluetoothLEHardwareInterface.ScanForPeripheralsWithServices(null, (address, name) =>
             {
-                _timeout = 0f;
+              // if your device does not advertise the rssi and manufacturer specific data
+              // then you must use this callback because the next callback only gets called
+              // if you have manufacturer specific data
 
-                switch (_state)
+              if (!_rssiOnly)
+              {
+                if (name.Contains(DeviceName))
                 {
-                    case States.None:
-                        break;
+                  StatusMessage = "Found " + name;
 
-                    case States.Scan:
-                        StatusMessage = "Scanning for " + DeviceName;
+                  BluetoothLEHardwareInterface.StopScan();
 
-                        BluetoothLEHardwareInterface.ScanForPeripheralsWithServices(null, (address, name) =>
-                        {
-                            // if your device does not advertise the rssi and manufacturer specific data
-                            // then you must use this callback because the next callback only gets called
-                            // if you have manufacturer specific data
-
-                            if (!_rssiOnly)
-                            {
-                                if (name.Contains(DeviceName))
-                                {
-                                    StatusMessage = "Found " + name;
-
-                                    BluetoothLEHardwareInterface.StopScan();
-
-                                    // found a device with the name we want
-                                    // this example does not deal with finding more than one
-                                    _deviceAddress = address;
-                                    SetState(States.Connect, 0.5f);
-                                }
-                            }
-
-                        }, (address, name, rssi, bytes) =>
-                        {
-
-                            // use this one if the device responses with manufacturer specific data and the rssi
-
-                            if (name.Contains(DeviceName))
-                            {
-                                StatusMessage = "Found " + name;
-
-                                if (_rssiOnly)
-                                {
-                                    _rssi = rssi;
-                                }
-                                else
-                                {
-                                    BluetoothLEHardwareInterface.StopScan();
-
-                                    // found a device with the name we want
-                                    // this example does not deal with finding more than one
-                                    _deviceAddress = address;
-                                    SetState(States.Connect, 0.5f);
-                                }
-                            }
-
-                        }, _rssiOnly); // this last setting allows RFduino to send RSSI without having manufacturer data
-
-                        if (_rssiOnly)
-                            SetState(States.ScanRSSI, 0.5f);
-                        break;
-
-                    case States.ScanRSSI:
-                        break;
-
-                    case States.Connect:
-                        StatusMessage = "Connecting...";
-
-                        // set these flags
-                        _foundButtonUUID = false;
-                        _foundLedUUID = false;
-
-                        // note that the first parameter is the address, not the name. I have not fixed this because
-                        // of backwards compatiblity.
-                        // also note that I am note using the first 2 callbacks. If you are not looking for specific characteristics you can use one of
-                        // the first 2, but keep in mind that the device will enumerate everything and so you will want to have a timeout
-                        // large enough that it will be finished enumerating before you try to subscribe or do any other operations.
-                        BluetoothLEHardwareInterface.ConnectToPeripheral(_deviceAddress, null, null, (address, serviceUUID, characteristicUUID) =>
-                        {
-                            StatusMessage = "Connected...";
-
-                            if (IsEqual(serviceUUID, ServiceUUID))
-                            {
-                                StatusMessage = "Found Service UUID";
-
-                                _foundButtonUUID = _foundButtonUUID || IsEqual(characteristicUUID, ButtonUUID);
-                                _foundLedUUID = _foundLedUUID || IsEqual(characteristicUUID, LedUUID);
-
-                                // if we have found both characteristics that we are waiting for
-                                // set the state. make sure there is enough timeout that if the
-                                // device is still enumerating other characteristics it finishes
-                                // before we try to subscribe
-                                if (_foundButtonUUID && _foundLedUUID)
-                                {
-                                    _connected = true;
-                                    SetState(States.RequestMTU, 2f);
-                                }
-                            }
-                        });
-                        break;
-
-                    case States.RequestMTU:
-                        StatusMessage = "Requesting MTU";
-
-                        BluetoothLEHardwareInterface.RequestMtu(_deviceAddress, 185, (address, newMTU) =>
-                        {
-                            StatusMessage = "MTU set to " + newMTU.ToString();
-
-                            SetState(States.Subscribe, 0.1f);
-                        });
-                        break;
-
-                    case States.Subscribe:
-                        StatusMessage = "Subscribing to characteristics...";
-
-                        BluetoothLEHardwareInterface.SubscribeCharacteristicWithDeviceAddress(_deviceAddress, ServiceUUID, ButtonUUID, (notifyAddress, notifyCharacteristic) =>
-                        {
-                            StatusMessage = "Waiting for user action (1)...";
-                            _state = States.None;
-
-                            // read the initial state of the button
-                            BluetoothLEHardwareInterface.ReadCharacteristic(_deviceAddress, ServiceUUID, ButtonUUID, (characteristic, bytes) =>
-                            {
-                                ProcessButton(bytes);
-                            });
-
-                        }, (address, characteristicUUID, bytes) =>
-                        {
-                            if (_state != States.None)
-                            {
-                                // some devices do not properly send the notification state change which calls
-                                // the lambda just above this one so in those cases we don't have a great way to
-                                // set the state other than waiting until we actually got some data back.
-                                // The esp32 sends the notification above, but if yuor device doesn't you would have
-                                // to send data like pressing the button on the esp32 as the sketch for this demo
-                                // would then send data to trigger this.
-                                StatusMessage = "Waiting for user action (2)...";
-
-                                _state = States.None;
-                            }
-
-                            // we received some data from the device
-                            ProcessButton(bytes);
-                        });
-                        break;
-
-                    case States.Unsubscribe:
-                        BluetoothLEHardwareInterface.UnSubscribeCharacteristic(_deviceAddress, ServiceUUID, ButtonUUID, null);
-                        SetState(States.Disconnect, 4f);
-                        break;
-
-                    case States.Disconnect:
-                        StatusMessage = "Commanded disconnect.";
-
-                        if (_connected)
-                        {
-                            BluetoothLEHardwareInterface.DisconnectPeripheral(_deviceAddress, (address) =>
-                            {
-                                StatusMessage = "Device disconnected";
-                                BluetoothLEHardwareInterface.DeInitialize(() =>
-                                {
-                                    _connected = false;
-                                    _state = States.None;
-                                });
-                            });
-                        }
-                        else
-                        {
-                            BluetoothLEHardwareInterface.DeInitialize(() =>
-                            {
-                                _state = States.None;
-                            });
-                        }
-                        break;
+                  // found a device with the name we want
+                  // this example does not deal with finding more than one
+                  _deviceAddress = address;
+                  SetState(States.Connect, 0.5f);
                 }
+              }
+
+            }, (address, name, rssi, bytes) =>
+            {
+
+              // use this one if the device responses with manufacturer specific data and the rssi
+
+              if (name.Contains(DeviceName))
+              {
+                StatusMessage = "Found " + name;
+
+                if (_rssiOnly)
+                {
+                  _rssi = rssi;
+                }
+                else
+                {
+                  BluetoothLEHardwareInterface.StopScan();
+
+                  // found a device with the name we want
+                  // this example does not deal with finding more than one
+                  _deviceAddress = address;
+                  SetState(States.Connect, 0.5f);
+                }
+              }
+
+            }, _rssiOnly); // this last setting allows RFduino to send RSSI without having manufacturer data
+
+            if (_rssiOnly)
+              SetState(States.ScanRSSI, 0.5f);
+            break;
+
+          case States.ScanRSSI:
+            break;
+
+          case States.Connect:
+            StatusMessage = "Connecting...";
+
+            // set these flags
+            _foundButtonUUID = false;
+            _foundLedUUID = false;
+
+            // note that the first parameter is the address, not the name. I have not fixed this because
+            // of backwards compatiblity.
+            // also note that I am note using the first 2 callbacks. If you are not looking for specific characteristics you can use one of
+            // the first 2, but keep in mind that the device will enumerate everything and so you will want to have a timeout
+            // large enough that it will be finished enumerating before you try to subscribe or do any other operations.
+            BluetoothLEHardwareInterface.ConnectToPeripheral(_deviceAddress, null, null, (address, serviceUUID, characteristicUUID) =>
+            {
+              StatusMessage = "Connected...";
+
+              if (IsEqual(serviceUUID, ServiceUUID))
+              {
+                StatusMessage = "Found Service UUID";
+
+                _foundButtonUUID = _foundButtonUUID || IsEqual(characteristicUUID, ButtonUUID);
+                _foundLedUUID = _foundLedUUID || IsEqual(characteristicUUID, LedUUID);
+
+                // if we have found both characteristics that we are waiting for
+                // set the state. make sure there is enough timeout that if the
+                // device is still enumerating other characteristics it finishes
+                // before we try to subscribe
+                if (_foundButtonUUID && _foundLedUUID)
+                {
+                  _connected = true;
+                  SetState(States.RequestMTU, 2f);
+                }
+              }
+            });
+            break;
+
+          case States.RequestMTU:
+            StatusMessage = "Requesting MTU";
+
+            BluetoothLEHardwareInterface.RequestMtu(_deviceAddress, 185, (address, newMTU) =>
+            {
+              StatusMessage = "MTU set to " + newMTU.ToString();
+
+              SetState(States.Subscribe, 0.1f);
+            });
+            break;
+
+          case States.Subscribe:
+            StatusMessage = "Subscribing to characteristics...";
+
+            BluetoothLEHardwareInterface.SubscribeCharacteristicWithDeviceAddress(_deviceAddress, ServiceUUID, ButtonUUID, (notifyAddress, notifyCharacteristic) =>
+            {
+              StatusMessage = "Waiting for user action (1)...";
+              _state = States.None;
+
+              // read the initial state of the button
+              BluetoothLEHardwareInterface.ReadCharacteristic(_deviceAddress, ServiceUUID, ButtonUUID, (characteristic, bytes) =>
+              {
+                ProcessButton(bytes);
+              });
+
+            }, (address, characteristicUUID, bytes) =>
+            {
+              if (_state != States.None)
+              {
+                // some devices do not properly send the notification state change which calls
+                // the lambda just above this one so in those cases we don't have a great way to
+                // set the state other than waiting until we actually got some data back.
+                // The esp32 sends the notification above, but if yuor device doesn't you would have
+                // to send data like pressing the button on the esp32 as the sketch for this demo
+                // would then send data to trigger this.
+                StatusMessage = "Waiting for user action (2)...";
+
+                _state = States.None;
+              }
+
+              // we received some data from the device
+              ProcessButton(bytes);
+            });
+            break;
+
+          case States.Unsubscribe:
+            BluetoothLEHardwareInterface.UnSubscribeCharacteristic(_deviceAddress, ServiceUUID, ButtonUUID, null);
+            SetState(States.Disconnect, 4f);
+            break;
+
+          case States.Disconnect:
+            StatusMessage = "Commanded disconnect.";
+
+            if (_connected)
+            {
+              BluetoothLEHardwareInterface.DisconnectPeripheral(_deviceAddress, (address) =>
+              {
+                StatusMessage = "Device disconnected";
+                BluetoothLEHardwareInterface.DeInitialize(() =>
+                              {
+                                _connected = false;
+                                _state = States.None;
+                              });
+              });
             }
+            else
+            {
+              BluetoothLEHardwareInterface.DeInitialize(() =>
+              {
+                _state = States.None;
+              });
+            }
+            break;
         }
+      }
     }
+  }
 
-    private bool ledON = false;
-    public void OnLED()
+  private bool ledON = false;
+  public void OnLED()
+  {
+    ledON = !ledON;
+    if (ledON)
     {
-        ledON = !ledON;
-        if (ledON)
-        {
-            SendByte((byte)0x01);
-        }
-        else
-        {
-            SendByte((byte)0x00);
-        }
+      SendByte((byte)0x01);
     }
-
-    string FullUUID(string uuid)
+    else
     {
-        string fullUUID = uuid;
-        if (fullUUID.Length == 4)
-            fullUUID = "0000" + uuid + "-0000-1000-8000-00805f9b34fb";
-
-        return fullUUID;
+      SendByte((byte)0x00);
     }
+  }
 
-    bool IsEqual(string uuid1, string uuid2)
+  string FullUUID(string uuid)
+  {
+    string fullUUID = uuid;
+    if (fullUUID.Length == 4)
+      fullUUID = "0000" + uuid + "-0000-1000-8000-00805f9b34fb";
+
+    return fullUUID;
+  }
+
+  bool IsEqual(string uuid1, string uuid2)
+  {
+    if (uuid1.Length == 4)
+      uuid1 = FullUUID(uuid1);
+    if (uuid2.Length == 4)
+      uuid2 = FullUUID(uuid2);
+
+    return (uuid1.ToUpper().Equals(uuid2.ToUpper()));
+  }
+
+  void SendByte(byte value)
+  {
+    byte[] data = { value };
+    BluetoothLEHardwareInterface.WriteCharacteristic(_deviceAddress, ServiceUUID, LedUUID, data, data.Length, true, (characteristicUUID) =>
     {
-        if (uuid1.Length == 4)
-            uuid1 = FullUUID(uuid1);
-        if (uuid2.Length == 4)
-            uuid2 = FullUUID(uuid2);
 
-        return (uuid1.ToUpper().Equals(uuid2.ToUpper()));
-    }
-
-    void SendByte(byte value)
-    {
-        byte[] data = { value };
-        BluetoothLEHardwareInterface.WriteCharacteristic(_deviceAddress, ServiceUUID, LedUUID, data, data.Length, true, (characteristicUUID) =>
-        {
-
-            BluetoothLEHardwareInterface.Log("Write Succeeded");
-        });
-    }
+      BluetoothLEHardwareInterface.Log("Write Succeeded");
+    });
+  }
 }
 
 /*
