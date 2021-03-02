@@ -1,4 +1,3 @@
-#include <BLE2902.h>
 #include <BLEDevice.h>
 #include <BLEServer.h>
 #include <BLEUtils.h>
@@ -14,8 +13,14 @@ bool oldDeviceConnected = false;
 uint32_t value = 0;
 
 class MyServerCallbacks : public BLEServerCallbacks {
-  void onConnect(BLEServer* pServer) { deviceConnected = true; };
-  void onDisconnect(BLEServer* pServer) { deviceConnected = false; }
+  void onConnect(BLEServer* pServer) {
+    Serial.println("connect");
+    deviceConnected = true;
+  };
+  void onDisconnect(BLEServer* pServer) {
+    Serial.println("disconnect");
+    deviceConnected = false;
+  }
 };
 
 void setup() {
@@ -25,23 +30,15 @@ void setup() {
   pServer->setCallbacks(new MyServerCallbacks());
   BLEService* pService = pServer->createService(SERVICE_UUID);
   pCharacteristic = pService->createCharacteristic(
-      CHARACTERISTIC_UUID, BLECharacteristic::PROPERTY_READ |
-                               BLECharacteristic::PROPERTY_WRITE |
-                               BLECharacteristic::PROPERTY_NOTIFY |
-                               BLECharacteristic::PROPERTY_INDICATE);
-  pCharacteristic->addDescriptor(new BLE2902());
+      CHARACTERISTIC_UUID, BLECharacteristic::PROPERTY_NOTIFY);
   pService->start();
-  BLEAdvertising* pAdvertising = BLEDevice::getAdvertising();
-  pAdvertising->addServiceUUID(SERVICE_UUID);
-  pAdvertising->setScanResponse(false);
-  pAdvertising->setMinPreferred(0x0);
-  BLEDevice::startAdvertising();
-  Serial.println("Waiting a client connection to notify...");
+  pServer->startAdvertising();
+  Serial.println("Start advertising...  ");
   M5.Lcd.setTextSize(2);
   M5.Lcd.setCursor(0, 0);
-  M5.Lcd.println("BLE");
+  M5.Lcd.println("BLE Notify");
   M5.Lcd.setCursor(0, 18);
-  M5.Lcd.println("Connecting...");
+  M5.Lcd.println("Start advertising...  ");
 }
 
 void loop() {
@@ -49,16 +46,16 @@ void loop() {
     pCharacteristic->setValue((uint8_t*)&value, 4);
     pCharacteristic->notify();
     M5.Lcd.setCursor(0, 18);
-    M5.Lcd.printf("Count%3d     ", value);
+    M5.Lcd.printf("Count%3d               ", value);
     value++;
     delay(100);
   }
   if (!deviceConnected && oldDeviceConnected) {
     delay(500);
     pServer->startAdvertising();
-    Serial.println("start advertising");
+    Serial.println("Restart advertising");
     M5.Lcd.setCursor(0, 18);
-    M5.Lcd.println("Advertising..");
+    M5.Lcd.println("Restart advertising...");
     oldDeviceConnected = deviceConnected;
   }
   if (deviceConnected && !oldDeviceConnected) {
