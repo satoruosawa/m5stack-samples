@@ -1,0 +1,34 @@
+// AUTOMATICALLY GENERATED FILE. PLEASE DO NOT MODIFY IT MANUALLY
+
+// PIO Unified Debugger
+//
+// Documentation: https://docs.platformio.org/page/plus/debugging.html
+// Configuration: https://docs.platformio.org/page/projectconf/section_env_debug.html
+
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "platformio-debug",
+            "request": "launch",
+            "name": "PIO Debug",
+            "executable": "/Users/satoruosawa/Documents/00_develop/m5stack-samples/02_communication/03_ble-android-unity/01_lib_Bluetooth_LE/01_notify/m5stack/.pio/build/m5stack-core-esp32/firmware.elf",
+            "projectEnvName": "m5stack-core-esp32",
+            "toolchainBinDir": "/Users/satoruosawa/.platformio/packages/toolchain-xtensa32/bin",
+            "preLaunchTask": {
+                "type": "PlatformIO",
+                "task": "Pre-Debug"
+            },
+            "internalConsoleOptions": "openOnSessionStart"
+        },
+        {
+            "type": "platformio-debug",
+            "request": "launch",
+            "name": "PIO Debug (skip Pre-Debug)",
+            "executable": "/Users/satoruosawa/Documents/00_develop/m5stack-samples/02_communication/03_ble-android-unity/01_lib_Bluetooth_LE/01_notify/m5stack/.pio/build/m5stack-core-esp32/firmware.elf",
+            "projectEnvName": "m5stack-core-esp32",
+            "toolchainBinDir": "/Users/satoruosawa/.platformio/packages/toolchain-xtensa32/bin",
+            "internalConsoleOptions": "openOnSessionStart"
+        }
+    ]
+}
