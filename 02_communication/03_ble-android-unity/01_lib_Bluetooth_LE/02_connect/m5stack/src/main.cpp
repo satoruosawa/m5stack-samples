@@ -14,12 +14,22 @@ bool deviceConnected = false;
 bool oldDeviceConnected = false;
 
 class MyServerCallbacks : public BLEServerCallbacks {
-  void onConnect(BLEServer* pServer) { deviceConnected = true; };
-  void onDisconnect(BLEServer* pServer) { deviceConnected = false; }
+  void onConnect(BLEServer* pServer) {
+    Serial.println("connect");
+    deviceConnected = true;
+  };
+  void onDisconnect(BLEServer* pServer) {
+    Serial.println("disconnect");
+    deviceConnected = false;
+  }
 };
 
 class dataCb : public BLECharacteristicCallbacks {
-  void onRead(BLECharacteristic* pChar) { Serial.println("Get Data"); }
+  void onRead(BLECharacteristic* pCharacteristic) { Serial.println("onRead"); }
+  void onWrite(BLECharacteristic* pCharacteristic) {
+    Serial.println("onWrite");
+    Serial.println(pCharacteristic->getValue().c_str());
+  }
 };
 
 void setup() {
@@ -32,8 +42,9 @@ void setup() {
 
   BLEService* pService = pServer->createService(SERVICE_UUID);
   pService
-      ->createCharacteristic(CHARACTERISTIC_UUID,
-                             BLECharacteristic::PROPERTY_READ)
+      ->createCharacteristic(
+          CHARACTERISTIC_UUID,
+          BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE)
       ->setCallbacks(new dataCb());
 
   pService->start();
