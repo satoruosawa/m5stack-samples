@@ -17,15 +17,14 @@ public class BleHandler : MonoBehaviour
   {
     NotInitialized,
     NotFound,
-    Scanning,
     FoundButNotConnected,
     Connected,
   }
+  bool isWaitingCallback = false;
 
   States state = States.NotInitialized;
   string _deviceAddress;
   bool _foundCharacteristicUUID = false;
-  bool _isWaitingCallback = false;
 
   async void Start()
   {
@@ -42,83 +41,131 @@ public class BleHandler : MonoBehaviour
 
   async UniTask Initialize()
   {
+    if (state != States.NotInitialized || isWaitingCallback)
+    {
+      string s = "Already initialized. State = " + state;
+      s = isWaitingCallback ? s + " [waiting process]" : s;
+      Debug.LogWarning(s);
+      return;
+    }
     Reset();
-    _isWaitingCallback = true;
+    isWaitingCallback = true;
+    // TODO: Add timeout.
+    Debug.Log("[" + Time.time + "]: Start initialize.");
     BluetoothLEHardwareInterface.Initialize(true, false, () =>
     {
       state = States.NotFound;
-      _isWaitingCallback = false;
+      isWaitingCallback = false;
+      Debug.Log("[" + Time.time + "]: End initialize.");
     }, (error) =>
     {
-      Debug.Log("Error during initialize: " + error);
+      Debug.LogError("Error during initialize: " + error);
     });
     await WaitUntilCallback();
-    await UniTask.Delay(100);
+    await UniTask.Delay(5000);
   }
 
   async UniTask Scan()
   {
-    Debug.Log("Scanning for " + deviceName);
-    _isWaitingCallback = true;
+    if (state != States.NotFound || isWaitingCallback)
+    {
+      string s = "You can't sacn. State = " + state;
+      s = isWaitingCallback ? s + " [waiting process]" : s;
+      Debug.LogWarning(s);
+      return;
+    }
+    Debug.Log("[" + Time.time + "]: Start Scanning for " + deviceName);
+    isWaitingCallback = true;
+    // TODO: Add timeout.
     BluetoothLEHardwareInterface.ScanForPeripheralsWithServices(
     null, (address, name) =>
     {
       if (name.Contains(deviceName))
       {
-        Debug.Log("Found " + name);
+        Debug.Log("[" + Time.time + "]: Found " + name);
         BluetoothLEHardwareInterface.StopScan();
         _deviceAddress = address;
         state = States.FoundButNotConnected;
-        _isWaitingCallback = false;
+        isWaitingCallback = false;
       }
     });
     await WaitUntilCallback();
-    await UniTask.Delay(500);
+    await UniTask.Delay(5000);
   }
 
   async UniTask Connect()
   {
-    Debug.Log("Connecting...");
-    _isWaitingCallback = true;
-    _foundCharacteristicUUID = false;
-    BluetoothLEHardwareInterface.ConnectToPeripheral(
-    _deviceAddress, null, null,
-    (address, serviceUUID, characteristicUUID) =>
+    if (state != States.FoundButNotConnected || isWaitingCallback)
     {
-      Debug.Log("Connected...");
-      if (IsEqual(serviceUUID, serviceUUID))
+      string s = "You can't connect. State = " + state;
+      s = isWaitingCallback ? s + " [waiting process]" : s;
+      Debug.LogWarning(s);
+      return;
+    }
+    isWaitingCallback = true;
+    _foundCharacteristicUUID = false;
+    Debug.Log("[" + Time.time + "]: Start connecting.");
+    // TODO: Add timeout.
+    BluetoothLEHardwareInterface.ConnectToPeripheral(
+    _deviceAddress, (ad) =>
+    {
+      Debug.Log("[" + Time.time + "]: Connected. Address = " + ad);
+      state = States.Connected;
+    }, (ad, su) =>
+    {
+      if (IsEqual(su, serviceUUID))
+        Debug.Log(
+          "[" + Time.time + "]: Found Service UUID. UUID = " + su);
+    },
+    (address, su, cu) =>
+    {
+      if (IsEqual(su, serviceUUID))
       {
-        Debug.Log("Found Service UUID");
-        Debug.Log("Found Service UUID " + characteristicUUID);
-        _foundCharacteristicUUID =
-          _foundCharacteristicUUID ||
-          IsEqual(characteristicUUID, characteristicUUID);
-        if (_foundCharacteristicUUID)
+        if (IsEqual(cu, readCharacteristicUUID))
         {
-          state = States.Connected;
-          _isWaitingCallback = false;
+          Debug.Log(
+            "[" + Time.time + "]: Found Characteristic UUID. UUID = " + cu);
         }
+        else if (IsEqual(cu, writeCharacteristicUUID))
+        {
+          Debug.Log(
+            "[" + Time.time + "]: Found Characteristic UUID. UUID = " + cu);
+        }
+        // TODO: Check Algorythm.
+        //   Debug.Log("Found Service UUID " + cu);
+        //   _foundCharacteristicUUID =
+        //     _foundCharacteristicUUID ||
+        //     IsEqual(cu, characteristicUUID);
+        //   if (_foundCharacteristicUUID)
+        //   {
+        //     state = States.Connected;
+        //     isWaitingCallback = false;
+        //   }
       }
     }, (disconnectAddress) =>
     {
+      // TODO: Check Algorythm.
       Debug.Log("Disconnected");
       Reset();
-      _isWaitingCallback = false;
+      isWaitingCallback = false;
     });
     await WaitUntilCallback();
-    await UniTask.Delay(2000);
+    await UniTask.Delay(5000);
   }
 
   IEnumerator WaitUntilCallback()
   {
-    while (_isWaitingCallback)
+    while (isWaitingCallback)
     {
       yield return null;
     }
   }
 
-  public void Reconnect()
+  async public void Reconnect()
   {
+    await Initialize();
+    await Scan();
+    await Connect();
   }
 
   string FullUUID(string uuid)
