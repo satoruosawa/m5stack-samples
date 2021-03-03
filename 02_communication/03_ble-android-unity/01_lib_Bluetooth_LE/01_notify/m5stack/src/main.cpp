@@ -12,11 +12,11 @@ uint32_t value = 0;
 
 class MyServerCallbacks : public BLEServerCallbacks {
   void onConnect(BLEServer* pServer) {
-    Serial.println("connect");
+    // Serial.println("connect");
     deviceConnected = true;
   };
   void onDisconnect(BLEServer* pServer) {
-    Serial.println("disconnect");
+    // Serial.println("disconnect");
     deviceConnected = false;
   }
 };
@@ -31,7 +31,7 @@ void setup() {
       CHARACTERISTIC_UUID, BLECharacteristic::PROPERTY_NOTIFY);
   pService->start();
   pServer->startAdvertising();
-  Serial.println("Start advertising...  ");
+  // Serial.println("Start advertising...  ");
   M5.Lcd.setTextSize(2);
   M5.Lcd.setCursor(0, 0);
   M5.Lcd.println("BLE Notify");
@@ -39,19 +39,36 @@ void setup() {
   M5.Lcd.println("Start advertising...  ");
 }
 
+void refreshRate() {
+  static int frame_count = 0;
+  static float prev_time = 0.0;
+  static float rate = 60.0;
+  frame_count++;
+  float time = millis() / 1000.0 - prev_time;
+  if (time >= 0.5f) {
+    rate = frame_count / time;
+    rate = frame_count / time;
+    frame_count = 0;
+    prev_time = millis() / 1000.0;
+  }
+  M5.Lcd.setCursor(0, 54);
+  M5.Lcd.printf("Refresh Rate %5.2f", rate);
+}
+
 void loop() {
+  refreshRate();
   if (deviceConnected) {
     pCharacteristic->setValue((uint8_t*)&value, 4);
     pCharacteristic->notify();
     M5.Lcd.setCursor(0, 18);
     M5.Lcd.printf("Count%3d               ", value);
     value++;
-    delay(100);
+    delay(10);
   }
   if (!deviceConnected && oldDeviceConnected) {
     delay(500);
     pServer->startAdvertising();
-    Serial.println("Restart advertising");
+    // Serial.println("Restart advertising");
     M5.Lcd.setCursor(0, 18);
     M5.Lcd.println("Restart advertising...");
     oldDeviceConnected = deviceConnected;
