@@ -21,6 +21,16 @@ public class StatusText : MonoBehaviour
           statusUgui.text = "Initializing";
         }
         break;
+      case BleHandler.States.InitializationError:
+        if (!bleHandler.isWaitingCallback)
+        {
+          statusUgui.text = "Initialization error";
+        }
+        else
+        {
+          statusUgui.text = "Error ie wc";
+        }
+        break;
       case BleHandler.States.NotFound:
         if (!bleHandler.isWaitingCallback)
         {
@@ -44,7 +54,7 @@ public class StatusText : MonoBehaviour
       case BleHandler.States.Connected:
         if (!bleHandler.isWaitingCallback)
         {
-          statusUgui.text = "???";
+          statusUgui.text = "Error c nwc";
         }
         else
         {

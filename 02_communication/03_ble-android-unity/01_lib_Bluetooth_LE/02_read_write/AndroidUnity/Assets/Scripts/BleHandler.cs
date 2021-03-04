@@ -15,6 +15,7 @@ public class BleHandler : MonoBehaviour
   public enum States
   {
     NotInitialized,
+    InitializationError,
     NotFound,
     FoundButNotConnected,
     Connected,
@@ -50,7 +51,6 @@ public class BleHandler : MonoBehaviour
       return;
     }
     isWaitingCallback = true;
-    // TODO: Add timeout.
     Debug.Log("[" + Time.time + "]: Start initialize.");
     BluetoothLEHardwareInterface.Initialize(true, false, () =>
     {
@@ -59,6 +59,8 @@ public class BleHandler : MonoBehaviour
       Debug.Log("[" + Time.time + "]: End initialize.");
     }, (error) =>
     {
+      state = States.InitializationError;
+      isWaitingCallback = false;
       Debug.LogError("Error during initialize: " + error);
     });
     await WaitUntilCallback();
