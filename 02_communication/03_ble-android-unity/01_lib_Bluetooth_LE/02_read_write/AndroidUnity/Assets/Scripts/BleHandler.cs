@@ -12,22 +12,25 @@ public class BleHandler : MonoBehaviour
   public string writeCharacteristicUUID = "2222";
   [Serializable] public class StepEvent : UnityEvent<string> { }
   [SerializeField] private StepEvent readEvent = new StepEvent();
-
-  enum States
+  public enum States
   {
     NotInitialized,
     NotFound,
     FoundButNotConnected,
     Connected,
   }
-  bool isWaitingCallback = false;
+  public States state { get; private set; }
+  public bool isWaitingCallback { get; private set; }
 
-  States state = States.NotInitialized;
   string _deviceAddress;
   bool _foundCharacteristicUUID = false;
 
   async void Start()
   {
+    state = States.NotInitialized;
+    isWaitingCallback = false;
+    _deviceAddress = null;
+    _foundCharacteristicUUID = false;
     await Initialize();
     await Scan();
     await Connect();
@@ -35,8 +38,6 @@ public class BleHandler : MonoBehaviour
 
   void Reset()
   {
-    _deviceAddress = null;
-    _foundCharacteristicUUID = false;
   }
 
   async UniTask Initialize()
@@ -48,7 +49,6 @@ public class BleHandler : MonoBehaviour
       Debug.LogWarning(s);
       return;
     }
-    Reset();
     isWaitingCallback = true;
     // TODO: Add timeout.
     Debug.Log("[" + Time.time + "]: Start initialize.");
@@ -146,7 +146,7 @@ public class BleHandler : MonoBehaviour
     {
       // TODO: Check Algorythm.
       Debug.Log("Disconnected");
-      Reset();
+      // Reset();
       isWaitingCallback = false;
     });
     await WaitUntilCallback();
