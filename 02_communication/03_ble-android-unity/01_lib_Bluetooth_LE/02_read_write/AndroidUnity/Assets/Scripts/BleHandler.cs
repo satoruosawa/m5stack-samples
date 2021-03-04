@@ -16,7 +16,7 @@ public class BleHandler : MonoBehaviour
   {
     NotInitialized,
     Initializing,
-    InitializationError,
+    InitializationError, // Change InitializationError to Error
     NotFound,
     Scaning,
     FoundButNotConnected,
@@ -70,6 +70,7 @@ public class BleHandler : MonoBehaviour
       Debug.Log("[" + Time.time + "]: End initialize.");
     }, (error) =>
     {
+      //TODO: Change InitializationError to Error
       state = States.InitializationError;
       Debug.LogError("Error during initialize: " + error);
     });
@@ -237,6 +238,7 @@ public class BleHandler : MonoBehaviour
 
   public void ReadCharacteristic()
   {
+    // TODO: Make Async
     if (state != States.Connected)
     {
       Debug.LogWarning("Can't read. State = " + state);
@@ -263,7 +265,7 @@ public class BleHandler : MonoBehaviour
 
   public void WriteCharacteristic(string value)
   {
-    // TODO: Connect input field
+    // TODO: Make Async
     if (state != States.Connected)
     {
       Debug.LogWarning("Can't write. State = " + state);

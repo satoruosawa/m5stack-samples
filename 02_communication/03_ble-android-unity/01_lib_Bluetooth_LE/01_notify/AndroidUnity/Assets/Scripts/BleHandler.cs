@@ -15,7 +15,7 @@ public class BleHandler : MonoBehaviour
   {
     NotInitialized,
     Initializing,
-    InitializationError,
+    Error,
     NotFound,
     Scaning,
     FoundButNotConnected,
@@ -31,6 +31,7 @@ public class BleHandler : MonoBehaviour
   string deviceAddress = null;
   bool foundServiceUUID = false;
   bool foundNotifyCharacteristicUUID = false;
+  bool isNotificationSubscribed = false;
 
   async void Start()
   {
@@ -48,6 +49,7 @@ public class BleHandler : MonoBehaviour
     deviceAddress = null;
     foundServiceUUID = false;
     foundNotifyCharacteristicUUID = false;
+    isNotificationSubscribed = false;
   }
 
   public async void OnInitialize() { await Initialize(); }
@@ -67,8 +69,8 @@ public class BleHandler : MonoBehaviour
       Debug.Log("[" + Time.time + "]: End initialize.");
     }, (error) =>
     {
-      state = States.InitializationError;
-      Debug.LogError("Error during initialize: " + error);
+      state = States.Error;
+      Debug.LogError("Error: " + error);
     });
     while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
     await UniTask.Delay(100);
@@ -204,6 +206,62 @@ public class BleHandler : MonoBehaviour
     while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
   }
 
+  public async void OnSubscribe() { await Subscribe(); }
+
+  async UniTask Subscribe()
+  {
+    if (state != States.Connected && !isNotificationSubscribed)
+    {
+      Debug.LogWarning("Can't subscrie. State = " + state);
+      return;
+    }
+    else if (!foundNotifyCharacteristicUUID)
+    {
+      Debug.LogWarning("notifyCharacteristic is not found.");
+      return;
+    }
+    state = States.Subscribing;
+    Debug.Log("Start Subscribe.");
+    BluetoothLEHardwareInterface.SubscribeCharacteristicWithDeviceAddress(
+      deviceAddress, serviceUUID, notifyCharacteristicUUID,
+      (address, characteristic) =>
+      {
+        // Notification action callback doesn't work in Editor mode.
+        state = States.Connected;
+        isNotificationSubscribed = true;
+        Debug.Log("Subscribe Succeeded.");
+      }, (address, characteristicUUID, bytes) =>
+      {
+        string value = System.Text.Encoding.ASCII.GetString(bytes);
+        Debug.Log("Received. value = " + value);
+        notifyEvent.Invoke(value);
+      });
+    while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
+  }
+
+  public async void OnUnsubscribe() { await Unsubscribe(); }
+
+  async UniTask Unsubscribe()
+  {
+    if (state != States.Connected && isNotificationSubscribed)
+    {
+      Debug.LogWarning("Can't unsubscrie. State = " + state);
+      return;
+    }
+    state = States.Unsubscribing;
+    Debug.Log("Unsubscribe");
+    BluetoothLEHardwareInterface.UnSubscribeCharacteristic(
+      deviceAddress, serviceUUID, notifyCharacteristicUUID,
+      (name) =>
+      {
+        state = States.Connected;
+        isNotificationSubscribed = false;
+        Debug.Log("Unsubscribe Succeeded. " + name);
+      });
+    while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
+    await UniTask.Delay(4000);
+  }
+
   string FullUUID(string uuid)
   {
     string fullUUID = uuid;
@@ -223,61 +281,7 @@ public class BleHandler : MonoBehaviour
   {
     return state == States.Initializing || state == States.Scaning ||
       state == States.Connecting || state == States.Disconnecting ||
-      state == States.Deinitializing;
+      state == States.Deinitializing || state == States.Subscribing ||
+      state == States.Unsubscribing;
   }
-
-  public void SubsCharacteristic()
-  {
-    if (state != States.Connected)
-    {
-      Debug.LogWarning("Can't subscrie. State = " + state);
-      return;
-    }
-    else if (!foundNotifyCharacteristicUUID)
-    {
-      Debug.LogWarning("notifyCharacteristic is not found.");
-      return;
-    }
-    state = States.Subscribing;
-    Debug.Log("Subscribe");
-    BluetoothLEHardwareInterface.SubscribeCharacteristicWithDeviceAddress(
-      deviceAddress, serviceUUID, notifyCharacteristicUUID,
-      (address, characteristic) =>
-      {
-        // Notification action callback doesn't work in Editor mode.
-        state = States.Connected;
-        Debug.Log("Subscribe Succeeded.");
-      }, (address, characteristicUUID, bytes) =>
-      {
-        string value = System.Text.Encoding.ASCII.GetString(bytes);
-        notifyEvent.Invoke(value);
-      }
-    );
-  }
-
-  // public void WriteCharacteristic(string value)
-  // {
-  //   // TODO: Connect input field
-  //   if (state != States.Connected)
-  //   {
-  //     Debug.LogWarning("Can't write. State = " + state);
-  //     return;
-  //   }
-  //   else if (!foundWriteCharacteristicUUID)
-  //   {
-  //     Debug.LogWarning("WriteCharacteristic is not found.");
-  //     return;
-  //   }
-  //   state = States.Writing;
-  //   Debug.Log("Write bytes");
-  //   byte[] data = System.Text.Encoding.ASCII.GetBytes(value);
-  //   Debug.Log(data);
-  //   BluetoothLEHardwareInterface.WriteCharacteristic(
-  //   deviceAddress, serviceUUID, writeCharacteristicUUID, data, data.Length,
-  //   true, (characteristicUUID) =>
-  //   {
-  //     state = States.Connected;
-  //     Debug.Log("Read Succeeded. " + value);
-  //   });
-  // }
 }

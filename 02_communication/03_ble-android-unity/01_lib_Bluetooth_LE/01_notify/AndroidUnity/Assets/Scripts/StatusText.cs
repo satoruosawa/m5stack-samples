@@ -17,8 +17,8 @@ public class StatusText : MonoBehaviour
       case BleHandler.States.Initializing:
         statusUgui.text = "Initializing";
         break;
-      case BleHandler.States.InitializationError:
-        statusUgui.text = "Initialization error";
+      case BleHandler.States.Error:
+        statusUgui.text = "Error";
         break;
       case BleHandler.States.NotFound:
         statusUgui.text = "Initialized";
