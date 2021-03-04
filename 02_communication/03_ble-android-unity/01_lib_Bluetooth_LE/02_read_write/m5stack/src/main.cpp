@@ -66,9 +66,27 @@ void setup() {
   M5.Lcd.println("Start advertising...  ");
 }
 
+void refreshRate() {
+  static int frame_count = 0;
+  static float prev_time = 0.0;
+  static float rate = 60.0;
+  frame_count++;
+  float time = millis() / 1000.0 - prev_time;
+  if (time >= 0.5f) {
+    rate = frame_count / time;
+    rate = frame_count / time;
+    frame_count = 0;
+    prev_time = millis() / 1000.0;
+  }
+  M5.Lcd.setCursor(0, 54);
+  M5.Lcd.printf("Refresh Rate %5.2f", rate);
+}
+
 void loop() {
+  refreshRate();
   if (deviceConnected) {
-    M5.Lcd.println("                      ");
+    M5.Lcd.setCursor(0, 18);
+    M5.Lcd.println("Connected             ");
   }
   if (!deviceConnected && oldDeviceConnected) {
     delay(500);

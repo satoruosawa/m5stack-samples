@@ -1,6 +1,7 @@
 using System;
 using UnityEngine.Events;
 using UnityEngine;
+using Cysharp.Threading.Tasks;
 
 public class BleHandler : MonoBehaviour
 {
@@ -8,220 +9,268 @@ public class BleHandler : MonoBehaviour
   public string serviceUUID = "2220";
   public string readCharacteristicUUID = "2221";
   public string writeCharacteristicUUID = "2222";
-  [Serializable] public class StepEvent : UnityEvent<string> { }
-  [SerializeField] private StepEvent receiveEvent = new StepEvent();
-
-  enum States
+  float scanTimeout = 10.0f; //sec
+  [Serializable] public class ReadEvent : UnityEvent<string> { }
+  [SerializeField] ReadEvent readEvent = new ReadEvent();
+  public enum States
   {
-    None,
-    Scan,
-    ScanRSSI,
-    Connect,
-    RequestMTU,
-    Subscribe,
-    Unsubscribe,
-    Disconnect,
+    NotInitialized,
+    Initializing,
+    Error,
+    NotFound,
+    Scaning,
+    FoundButNotConnected,
+    Connecting,
+    Connected,
+    Disconnecting,
+    Deinitializing,
+    Reading,
+    Writing
   }
+  public States state { get; private set; }
 
-  bool _connected = false;
-  float _timeout = 0f;
-  States _state = States.None;
-  string _deviceAddress;
-  bool _foundCharacteristicUUID = false;
-  bool _rssiOnly = false;
-  int _rssi = 0;
+  string deviceAddress = null;
+  bool foundServiceUUID = false;
+  bool foundReadCharacteristicUUID = false;
+  bool foundWriteCharacteristicUUID = false;
 
-  string StatusMessage
+  async void Start()
   {
-    set
-    {
-      BluetoothLEHardwareInterface.Log(value);
-    }
+    Reset();
+    await Initialize();
+    await UniTask.Delay(5000);
+    await Scan();
+    await UniTask.Delay(5000);
+    await Connect();
   }
 
   void Reset()
   {
-    _connected = false;
-    _timeout = 0f;
-    _state = States.None;
-    _deviceAddress = null;
-    _foundCharacteristicUUID = false;
-    _rssi = 0;
+    state = States.NotInitialized;
+    deviceAddress = null;
+    foundServiceUUID = false;
+    foundReadCharacteristicUUID = false;
+    foundWriteCharacteristicUUID = false;
   }
 
-  void SetState(States newState, float timeout)
-  {
-    _state = newState;
-    _timeout = timeout;
-  }
+  public async void OnInitialize() { await Initialize(); }
 
-  void StartProcess()
+  async UniTask Initialize()
   {
-    Reset();
+    if (state != States.NotInitialized)
+    {
+      Debug.LogWarning("Can't initialize. State = " + state);
+      return;
+    }
+    state = States.Initializing;
+    Debug.Log("[" + Time.time + "]: Start initialize.");
     BluetoothLEHardwareInterface.Initialize(true, false, () =>
     {
-      SetState(States.Scan, 0.1f);
+      state = States.NotFound;
+      Debug.Log("[" + Time.time + "]: End initialize.");
     }, (error) =>
     {
-      StatusMessage = "Error during initialize: " + error;
+      state = States.Error;
+      Debug.LogError("Error: " + error);
     });
+    while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
+    await UniTask.Delay(100);
   }
 
-  void Start()
-  {
-    StartProcess();
-  }
+  public async void OnDeinitialize() { await Deinitialize(); }
 
-  public void Reconnect()
+  async UniTask Deinitialize()
   {
-    StartProcess();
-  }
-
-  void DataReceived(byte[] bytes)
-  {
-    Debug.Log("DataReceived");
-    Debug.Log(bytes[0]);
-    string str = System.Text.Encoding.ASCII.GetString(bytes);
-    receiveEvent.Invoke(str);
-  }
-
-  void Update()
-  {
-    // TODO: Refactoring
-    if (_timeout > 0f)
+    if (state == States.NotInitialized)
     {
-      _timeout -= Time.deltaTime;
-      if (_timeout <= 0f)
-      {
-        _timeout = 0f;
-        switch (_state)
-        {
-          case States.None:
-            break;
-          case States.Scan:
-            StatusMessage = "Scanning for " + deviceName;
+      Debug.LogWarning("NotInitialized");
+      return;
+    }
+    while (IsWaitingCallback())
+    {
+      if (state == States.Deinitializing) return;
+      await UniTask.Yield(PlayerLoopTiming.Update);
+    }
+    if (state == States.Connected)
+    {
+      await Disconnect();
+    }
+    state = States.Deinitializing;
+    Debug.Log("[" + Time.time + "]: Start deinitialize.");
+    BluetoothLEHardwareInterface.DeInitialize(() =>
+    {
+      Reset();
+      Debug.Log("[" + Time.time + "]: End deinitialize.");
+    });
+    while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
+  }
 
-            BluetoothLEHardwareInterface.ScanForPeripheralsWithServices(
-              null, (address, name) =>
-              {
-                if (!_rssiOnly)
-                {
-                  if (name.Contains(deviceName))
-                  {
-                    StatusMessage = "Found " + name;
-                    BluetoothLEHardwareInterface.StopScan();
-                    _deviceAddress = address;
-                    SetState(States.Connect, 0.5f);
-                  }
-                }
-              }, (address, name, rssi, bytes) =>
-              {
-                if (name.Contains(deviceName))
-                {
-                  StatusMessage = "Found " + name;
-                  if (_rssiOnly)
-                  {
-                    _rssi = rssi;
-                  }
-                  else
-                  {
-                    BluetoothLEHardwareInterface.StopScan();
-                    _deviceAddress = address;
-                    SetState(States.Connect, 0.5f);
-                  }
-                }
-              }, _rssiOnly);
-            if (_rssiOnly)
-              SetState(States.ScanRSSI, 0.5f);
-            break;
-          case States.ScanRSSI:
-            break;
-          case States.Connect:
-            StatusMessage = "Connecting...";
-            _foundCharacteristicUUID = false;
-            BluetoothLEHardwareInterface.ConnectToPeripheral(
-              _deviceAddress, null, null,
-              (address, serviceUUID, characteristicUUID) =>
-              {
-                StatusMessage = "Connected...";
-                if (IsEqual(serviceUUID, serviceUUID))
-                {
-                  StatusMessage = "Found Service UUID";
-                  Debug.Log("Found Service UUID " + characteristicUUID);
-                  _foundCharacteristicUUID = _foundCharacteristicUUID || IsEqual(characteristicUUID, characteristicUUID);
-                  if (_foundCharacteristicUUID)
-                  {
-                    _connected = true;
-                    SetState(States.RequestMTU, 2f);
-                  }
-                }
-              });
-            break;
-          case States.RequestMTU:
-            StatusMessage = "Requesting MTU";
-            BluetoothLEHardwareInterface.RequestMtu(_deviceAddress, 185,
-              (address, newMTU) =>
-            {
-              StatusMessage = "MTU set to " + newMTU.ToString();
-              SetState(States.Subscribe, 0.1f);
-            });
-            break;
-          case States.Subscribe:
-            StatusMessage = "Subscribing to characteristics...";
-            BluetoothLEHardwareInterface
-              .SubscribeCharacteristicWithDeviceAddress(
-                _deviceAddress, serviceUUID, readCharacteristicUUID,
-                (notifyAddress, notifyCharacteristic) =>
-            {
-              StatusMessage = "Waiting for user action (1)...";
-              _state = States.None;
-              BluetoothLEHardwareInterface.ReadCharacteristic(
-                _deviceAddress, serviceUUID, readCharacteristicUUID,
-                (characteristic, bytes) =>
-              {
-                DataReceived(bytes);
-              });
-            }, (address, characteristicUUID, bytes) =>
-            {
-              if (_state != States.None)
-              {
-                StatusMessage = "Waiting for user action (2)...";
-                _state = States.None;
-              }
-              DataReceived(bytes);
-            });
-            break;
-          case States.Unsubscribe:
-            BluetoothLEHardwareInterface.UnSubscribeCharacteristic(
-              _deviceAddress, serviceUUID, readCharacteristicUUID, null);
-            SetState(States.Disconnect, 4f);
-            break;
-          case States.Disconnect:
-            StatusMessage = "Commanded disconnect.";
-            if (_connected)
-            {
-              BluetoothLEHardwareInterface.DisconnectPeripheral(
-                _deviceAddress, (address) =>
-              {
-                StatusMessage = "Device disconnected";
-                BluetoothLEHardwareInterface.DeInitialize(() =>
-                {
-                  _connected = false;
-                  _state = States.None;
-                });
-              });
-            }
-            else
-            {
-              BluetoothLEHardwareInterface.DeInitialize(() =>
-              {
-                _state = States.None;
-              });
-            }
-            break;
+  public async void OnScan() { await Scan(); }
+
+  async UniTask Scan()
+  {
+    if (state != States.NotFound)
+    {
+      Debug.LogWarning("Can't scan. State = " + state);
+      return;
+    }
+    Debug.Log("[" + Time.time + "]: Start Scanning for " + deviceName);
+    state = States.Scaning;
+    BluetoothLEHardwareInterface.ScanForPeripheralsWithServices(
+    null, (address, name) =>
+    {
+      if (name.Contains(deviceName))
+      {
+        BluetoothLEHardwareInterface.StopScan();
+        deviceAddress = address;
+        state = States.FoundButNotConnected;
+        Debug.Log("[" + Time.time + "]: Found " + name);
+      }
+    });
+    float scanStart = Time.time;
+    while (IsWaitingCallback())
+    {
+      if (Time.time > scanStart + scanTimeout)
+      {
+        BluetoothLEHardwareInterface.StopScan();
+        Reset();
+        state = States.NotFound;
+        Debug.LogWarning("[" + Time.time + "]: Scan timeout.");
+        break;
+      }
+      await UniTask.Yield(PlayerLoopTiming.Update);
+    }
+    await UniTask.Delay(500);
+  }
+
+  public async void OnConnect() { await Connect(); }
+
+  async UniTask Connect()
+  {
+    if (state != States.FoundButNotConnected)
+    {
+      Debug.LogWarning("Can't connect. State = " + state);
+      return;
+    }
+    state = States.Connecting;
+    Debug.Log("[" + Time.time + "]: Start connecting.");
+    BluetoothLEHardwareInterface.ConnectToPeripheral(
+    deviceAddress, (ad) =>
+    {
+      state = States.Connected;
+      Debug.Log("[" + Time.time + "]: Connected. Address = " + ad);
+    }, (ad, su) =>
+    {
+      foundServiceUUID = true;
+      if (IsEqual(su, serviceUUID))
+        Debug.Log("[" + Time.time + "]: Found Service UUID. UUID = " + su);
+    },
+    (address, su, cu) =>
+    {
+      if (IsEqual(su, serviceUUID))
+      {
+        if (IsEqual(cu, readCharacteristicUUID))
+        {
+          foundReadCharacteristicUUID = true;
+          Debug.Log(
+            "[" + Time.time + "]: Found Characteristic UUID. UUID = " + cu);
+        }
+        else if (IsEqual(cu, writeCharacteristicUUID))
+        {
+          foundWriteCharacteristicUUID = true;
+          Debug.Log(
+            "[" + Time.time + "]: Found Characteristic UUID. UUID = " + cu);
         }
       }
+    }, (ad) =>
+    {
+      Reset();
+      state = States.NotFound;
+      Debug.Log("[" + Time.time + "]: Disconnected. Address = " + ad);
+    });
+    while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
+    await UniTask.Delay(2000);
+  }
+
+  public async void OnDisconnect() { await Disconnect(); }
+
+  async UniTask Disconnect()
+  {
+    if (state != States.Connected)
+    {
+      Debug.LogWarning("Can't disconnect. State = " + state);
+      return;
     }
+    state = States.Disconnecting;
+    Debug.Log("[" + Time.time + "]: Start disconnecting.");
+    BluetoothLEHardwareInterface.DisconnectPeripheral(
+      deviceAddress, (ad) =>
+      {
+        Reset();
+        state = States.NotFound;
+        Debug.Log("[" + Time.time + "]: Disconnected. Address = " + ad);
+      });
+    while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
+  }
+
+  public async void OnReadCharacteristic() { await ReadCharacteristic(); }
+
+  async UniTask ReadCharacteristic()
+  {
+    if (state != States.Connected)
+    {
+      Debug.LogWarning("Can't read. State = " + state);
+      return;
+    }
+    else if (!foundReadCharacteristicUUID)
+    {
+      Debug.LogWarning("ReadCharacteristic is not found.");
+      return;
+    }
+    state = States.Reading;
+    Debug.Log("Read bytes");
+    BluetoothLEHardwareInterface.ReadCharacteristic(
+    deviceAddress, serviceUUID, readCharacteristicUUID,
+    (characteristic, bytes) =>
+    {
+      // Read action callback doesn't work in Editor mode.
+      state = States.Connected;
+      string value = System.Text.Encoding.ASCII.GetString(bytes);
+      Debug.Log("Read Succeeded. " + value);
+      readEvent.Invoke(value);
+    });
+    while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
+  }
+
+  public async void OnWriteCharacteristic(string value)
+  {
+    await WriteCharacteristic(value);
+  }
+
+  async UniTask WriteCharacteristic(string value)
+  {
+    if (state != States.Connected)
+    {
+      Debug.LogWarning("Can't write. State = " + state);
+      return;
+    }
+    else if (!foundWriteCharacteristicUUID)
+    {
+      Debug.LogWarning("WriteCharacteristic is not found.");
+      return;
+    }
+    state = States.Writing;
+    Debug.Log("Write bytes");
+    byte[] data = System.Text.Encoding.ASCII.GetBytes(value);
+    Debug.Log(data);
+    BluetoothLEHardwareInterface.WriteCharacteristic(
+    deviceAddress, serviceUUID, writeCharacteristicUUID, data, data.Length,
+    true, (characteristicUUID) =>
+    {
+      state = States.Connected;
+      Debug.Log("Read Succeeded. " + value);
+    });
+    while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
   }
 
   string FullUUID(string uuid)
@@ -234,24 +283,16 @@ public class BleHandler : MonoBehaviour
 
   bool IsEqual(string uuid1, string uuid2)
   {
-    if (uuid1.Length == 4)
-      uuid1 = FullUUID(uuid1);
-    if (uuid2.Length == 4)
-      uuid2 = FullUUID(uuid2);
+    uuid1 = FullUUID(uuid1);
+    uuid2 = FullUUID(uuid2);
     return (uuid1.ToUpper().Equals(uuid2.ToUpper()));
   }
 
-  public void SendByte(string value)
+  bool IsWaitingCallback()
   {
-    // TODO: Connect input field
-    Debug.Log("Send bytes");
-    byte[] data = System.Text.Encoding.ASCII.GetBytes(value);
-    Debug.Log(data);
-    BluetoothLEHardwareInterface.WriteCharacteristic(
-      _deviceAddress, serviceUUID, writeCharacteristicUUID, data, data.Length,
-      true, (characteristicUUID) =>
-    {
-      BluetoothLEHardwareInterface.Log("Write Succeeded");
-    });
+    return state == States.Initializing || state == States.Scaning ||
+      state == States.Connecting || state == States.Disconnecting ||
+      state == States.Deinitializing || state == States.Reading ||
+      state == States.Writing;
   }
 }
