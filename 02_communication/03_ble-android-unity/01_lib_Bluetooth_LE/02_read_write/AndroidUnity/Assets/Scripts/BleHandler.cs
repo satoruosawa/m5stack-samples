@@ -10,8 +10,9 @@ public class BleHandler : MonoBehaviour
   public string serviceUUID = "2220";
   public string readCharacteristicUUID = "2221";
   public string writeCharacteristicUUID = "2222";
+  float scanTimeout = 10.0f; //sec
   [Serializable] public class StepEvent : UnityEvent<string> { }
-  [SerializeField] private StepEvent readEvent = new StepEvent();
+  [SerializeField] StepEvent readEvent = new StepEvent();
   public enum States
   {
     NotInitialized,
@@ -63,7 +64,7 @@ public class BleHandler : MonoBehaviour
       isWaitingCallback = false;
       Debug.LogError("Error during initialize: " + error);
     });
-    await WaitUntilCallback();
+    while (isWaitingCallback) await UniTask.Yield(PlayerLoopTiming.Update);
     await UniTask.Delay(5000);
   }
 
@@ -78,7 +79,6 @@ public class BleHandler : MonoBehaviour
     }
     Debug.Log("[" + Time.time + "]: Start Scanning for " + deviceName);
     isWaitingCallback = true;
-    // TODO: Add timeout.
     BluetoothLEHardwareInterface.ScanForPeripheralsWithServices(
     null, (address, name) =>
     {
@@ -91,7 +91,18 @@ public class BleHandler : MonoBehaviour
         isWaitingCallback = false;
       }
     });
-    await WaitUntilCallback();
+    float scanStart = Time.time;
+    while (isWaitingCallback)
+    {
+      if (Time.time > scanStart + scanTimeout)
+      {
+        BluetoothLEHardwareInterface.StopScan();
+        isWaitingCallback = false;
+        Debug.LogWarning("[" + Time.time + "]: Scan timeout.");
+        break;
+      }
+      await UniTask.Yield(PlayerLoopTiming.Update);
+    }
     await UniTask.Delay(5000);
   }
 
@@ -151,16 +162,8 @@ public class BleHandler : MonoBehaviour
       // Reset();
       isWaitingCallback = false;
     });
-    await WaitUntilCallback();
+    while (isWaitingCallback) await UniTask.Yield(PlayerLoopTiming.Update);
     await UniTask.Delay(5000);
-  }
-
-  IEnumerator WaitUntilCallback()
-  {
-    while (isWaitingCallback)
-    {
-      yield return null;
-    }
   }
 
   async public void Reconnect()
