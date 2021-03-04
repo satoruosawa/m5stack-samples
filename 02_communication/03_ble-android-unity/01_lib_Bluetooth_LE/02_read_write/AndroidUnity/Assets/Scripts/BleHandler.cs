@@ -10,8 +10,8 @@ public class BleHandler : MonoBehaviour
   public string readCharacteristicUUID = "2221";
   public string writeCharacteristicUUID = "2222";
   float scanTimeout = 10.0f; //sec
-  [Serializable] public class StepEvent : UnityEvent<string> { }
-  [SerializeField] StepEvent readEvent = new StepEvent();
+  [Serializable] public class ReadEvent : UnityEvent<string> { }
+  [SerializeField] ReadEvent readEvent = new ReadEvent();
   public enum States
   {
     NotInitialized,
@@ -80,7 +80,15 @@ public class BleHandler : MonoBehaviour
 
   async UniTask Deinitialize()
   {
-    // TODO:
+    while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
+    state = States.Deinitializing;
+    Debug.Log("[" + Time.time + "]: Start deinitialize.");
+    BluetoothLEHardwareInterface.DeInitialize(() =>
+    {
+      state = States.NotInitialized;
+      Debug.Log("[" + Time.time + "]: End deinitialize.");
+    });
+    while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
   }
 
   public async void OnScan() { await Scan(); }
@@ -229,9 +237,9 @@ public class BleHandler : MonoBehaviour
     {
       // Read action callback doesn't work in Editor mode.
       state = States.Connected;
-      Debug.Log("Read Succeeded");
-      string str = System.Text.Encoding.ASCII.GetString(bytes);
-      readEvent.Invoke(str);
+      string value = System.Text.Encoding.ASCII.GetString(bytes);
+      Debug.Log("Read Succeeded. " + value);
+      readEvent.Invoke(value);
     });
   }
 
@@ -257,7 +265,7 @@ public class BleHandler : MonoBehaviour
     true, (characteristicUUID) =>
     {
       state = States.Connected;
-      Debug.Log("Write Succeeded");
+      Debug.Log("Read Succeeded. " + value);
     });
   }
 }
