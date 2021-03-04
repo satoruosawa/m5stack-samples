@@ -29,18 +29,14 @@ public class BleHandler : MonoBehaviour
   }
   public States state { get; private set; }
 
-  string deviceAddress;
+  string deviceAddress = null;
   bool foundServiceUUID = false;
   bool foundReadCharacteristicUUID = false;
   bool foundWriteCharacteristicUUID = false;
 
   async void Start()
   {
-    state = States.NotInitialized;
-    deviceAddress = null;
-    foundServiceUUID = false;
-    foundReadCharacteristicUUID = false;
-    foundWriteCharacteristicUUID = false;
+    Reset();
     await Initialize();
     await UniTask.Delay(5000);
     await Scan();
@@ -50,6 +46,11 @@ public class BleHandler : MonoBehaviour
 
   void Reset()
   {
+    state = States.NotInitialized;
+    deviceAddress = null;
+    foundServiceUUID = false;
+    foundReadCharacteristicUUID = false;
+    foundWriteCharacteristicUUID = false;
   }
 
   public async void OnInitialize() { await Initialize(); }
@@ -156,11 +157,11 @@ public class BleHandler : MonoBehaviour
             "[" + Time.time + "]: Found Characteristic UUID. UUID = " + cu);
         }
       }
-    }, (disconnectAddress) =>
+    }, (ad) =>
     {
-      // TODO: Check Algorythm.
-      Debug.Log("Disconnected");
-      // Reset();
+      Reset();
+      state = States.NotFound;
+      Debug.Log("[" + Time.time + "]: Disconnected. Address = " + ad);
     });
     while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
   }
@@ -179,7 +180,8 @@ public class BleHandler : MonoBehaviour
     BluetoothLEHardwareInterface.DisconnectPeripheral(
       deviceAddress, (ad) =>
       {
-        state = States.FoundButNotConnected;
+        Reset();
+        state = States.NotFound;
         Debug.Log("[" + Time.time + "]: Disconnected. Address = " + ad);
       });
     while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
