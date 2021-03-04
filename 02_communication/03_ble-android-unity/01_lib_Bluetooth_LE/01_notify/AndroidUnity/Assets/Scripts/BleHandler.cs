@@ -226,31 +226,34 @@ public class BleHandler : MonoBehaviour
       state == States.Deinitializing;
   }
 
-  // public void ReadCharacteristic()
-  // {
-  //   if (state != States.Connected)
-  //   {
-  //     Debug.LogWarning("Can't read. State = " + state);
-  //     return;
-  //   }
-  //   else if (!foundNotifyCharacteristicUUID)
-  //   {
-  //     Debug.LogWarning("ReadCharacteristic is not found.");
-  //     return;
-  //   }
-  //   state = States.Reading;
-  //   Debug.Log("Read bytes");
-  //   BluetoothLEHardwareInterface.ReadCharacteristic(
-  //   deviceAddress, serviceUUID, notifyCharacteristicUUID,
-  //   (characteristic, bytes) =>
-  //   {
-  //     // Read action callback doesn't work in Editor mode.
-  //     state = States.Connected;
-  //     string value = System.Text.Encoding.ASCII.GetString(bytes);
-  //     Debug.Log("Read Succeeded. " + value);
-  //     readEvent.Invoke(value);
-  //   });
-  // }
+  public void SubsCharacteristic()
+  {
+    if (state != States.Connected)
+    {
+      Debug.LogWarning("Can't subscrie. State = " + state);
+      return;
+    }
+    else if (!foundNotifyCharacteristicUUID)
+    {
+      Debug.LogWarning("notifyCharacteristic is not found.");
+      return;
+    }
+    state = States.Subscribing;
+    Debug.Log("Subscribe");
+    BluetoothLEHardwareInterface.SubscribeCharacteristicWithDeviceAddress(
+      deviceAddress, serviceUUID, notifyCharacteristicUUID,
+      (address, characteristic) =>
+      {
+        // Notification action callback doesn't work in Editor mode.
+        state = States.Connected;
+        Debug.Log("Subscribe Succeeded.");
+      }, (address, characteristicUUID, bytes) =>
+      {
+        string value = System.Text.Encoding.ASCII.GetString(bytes);
+        notifyEvent.Invoke(value);
+      }
+    );
+  }
 
   // public void WriteCharacteristic(string value)
   // {
