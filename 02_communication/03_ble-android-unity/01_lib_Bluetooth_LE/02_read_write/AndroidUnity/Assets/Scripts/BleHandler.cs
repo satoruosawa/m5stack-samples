@@ -135,9 +135,9 @@ public class BleHandler : MonoBehaviour
       Debug.Log("[" + Time.time + "]: Connected. Address = " + ad);
     }, (ad, su) =>
     {
+      foundServiceUUID = true;
       if (IsEqual(su, serviceUUID))
-        Debug.Log(
-          "[" + Time.time + "]: Found Service UUID. UUID = " + su);
+        Debug.Log("[" + Time.time + "]: Found Service UUID. UUID = " + su);
     },
     (address, su, cu) =>
     {
@@ -145,23 +145,16 @@ public class BleHandler : MonoBehaviour
       {
         if (IsEqual(cu, readCharacteristicUUID))
         {
+          foundReadCharacteristicUUID = true;
           Debug.Log(
             "[" + Time.time + "]: Found Characteristic UUID. UUID = " + cu);
         }
         else if (IsEqual(cu, writeCharacteristicUUID))
         {
+          foundWriteCharacteristicUUID = true;
           Debug.Log(
             "[" + Time.time + "]: Found Characteristic UUID. UUID = " + cu);
         }
-        // TODO: Check Algorythm.
-        //   Debug.Log("Found Service UUID " + cu);
-        //   _foundCharacteristicUUID =
-        //     _foundCharacteristicUUID ||
-        //     IsEqual(cu, characteristicUUID);
-        //   if (_foundCharacteristicUUID)
-        //   {
-        //     state = States.Connected;
-        //   }
       }
     }, (disconnectAddress) =>
     {
@@ -214,11 +207,16 @@ public class BleHandler : MonoBehaviour
       state == States.Deinitializing;
   }
 
-  public void ReadByte()
+  public void ReadCharacteristic()
   {
     if (state != States.Connected)
     {
       Debug.LogWarning("Can't read. State = " + state);
+      return;
+    }
+    else if (!foundReadCharacteristicUUID)
+    {
+      Debug.LogWarning("ReadCharacteristic is not found.");
       return;
     }
     state = States.Reading;
@@ -235,12 +233,17 @@ public class BleHandler : MonoBehaviour
     });
   }
 
-  public void WriteByte(string value)
+  public void WriteCharacteristic(string value)
   {
     // TODO: Connect input field
     if (state != States.Connected)
     {
       Debug.LogWarning("Can't write. State = " + state);
+      return;
+    }
+    else if (!foundWriteCharacteristicUUID)
+    {
+      Debug.LogWarning("WriteCharacteristic is not found.");
       return;
     }
     state = States.Writing;
