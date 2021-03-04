@@ -15,13 +15,19 @@ public class BleHandler : MonoBehaviour
   public enum States
   {
     NotInitialized,
+    Initializing,
     InitializationError,
     NotFound,
+    Scaning,
     FoundButNotConnected,
+    Connecting,
     Connected,
+    Disconnecting,
+    Deinitializing,
+    Reading,
+    Writing
   }
   public States state { get; private set; }
-  public bool isWaitingCallback { get; private set; }
 
   string deviceAddress;
   bool foundServiceUUID = false;
@@ -31,13 +37,14 @@ public class BleHandler : MonoBehaviour
   async void Start()
   {
     state = States.NotInitialized;
-    isWaitingCallback = false;
     deviceAddress = null;
     foundServiceUUID = false;
     foundReadCharacteristicUUID = false;
     foundWriteCharacteristicUUID = false;
     await Initialize();
+    await UniTask.Delay(5000);
     await Scan();
+    await UniTask.Delay(5000);
     await Connect();
   }
 
@@ -49,28 +56,23 @@ public class BleHandler : MonoBehaviour
 
   async UniTask Initialize()
   {
-    if (state != States.NotInitialized || isWaitingCallback)
+    if (state != States.NotInitialized)
     {
-      string s = "Already initialized. State = " + state;
-      s = isWaitingCallback ? s + " [waiting process]" : s;
-      Debug.LogWarning(s);
+      Debug.LogWarning("Can't initialize. State = " + state);
       return;
     }
-    isWaitingCallback = true;
+    state = States.Initializing;
     Debug.Log("[" + Time.time + "]: Start initialize.");
     BluetoothLEHardwareInterface.Initialize(true, false, () =>
     {
       state = States.NotFound;
-      isWaitingCallback = false;
       Debug.Log("[" + Time.time + "]: End initialize.");
     }, (error) =>
     {
       state = States.InitializationError;
-      isWaitingCallback = false;
       Debug.LogError("Error during initialize: " + error);
     });
-    while (isWaitingCallback) await UniTask.Yield(PlayerLoopTiming.Update);
-    await UniTask.Delay(5000);
+    while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
   }
 
   public async void OnDeinitialize() { await Deinitialize(); }
@@ -84,15 +86,13 @@ public class BleHandler : MonoBehaviour
 
   async UniTask Scan()
   {
-    if (state != States.NotFound || isWaitingCallback)
+    if (state != States.NotFound)
     {
-      string s = "You can't sacn. State = " + state;
-      s = isWaitingCallback ? s + " [waiting process]" : s;
-      Debug.LogWarning(s);
+      Debug.LogWarning("Can't scan. State = " + state);
       return;
     }
     Debug.Log("[" + Time.time + "]: Start Scanning for " + deviceName);
-    isWaitingCallback = true;
+    state = States.Scaning;
     BluetoothLEHardwareInterface.ScanForPeripheralsWithServices(
     null, (address, name) =>
     {
@@ -101,43 +101,37 @@ public class BleHandler : MonoBehaviour
         BluetoothLEHardwareInterface.StopScan();
         deviceAddress = address;
         state = States.FoundButNotConnected;
-        isWaitingCallback = false;
         Debug.Log("[" + Time.time + "]: Found " + name);
       }
     });
     float scanStart = Time.time;
-    while (isWaitingCallback)
+    while (IsWaitingCallback())
     {
       if (Time.time > scanStart + scanTimeout)
       {
         BluetoothLEHardwareInterface.StopScan();
-        isWaitingCallback = false;
         Debug.LogWarning("[" + Time.time + "]: Scan timeout.");
         break;
       }
       await UniTask.Yield(PlayerLoopTiming.Update);
     }
-    await UniTask.Delay(5000);
   }
 
   public async void OnConnect() { await Connect(); }
 
   async UniTask Connect()
   {
-    if (state != States.FoundButNotConnected || isWaitingCallback)
+    if (state != States.FoundButNotConnected)
     {
-      string s = "You can't connect. State = " + state;
-      s = isWaitingCallback ? s + " [waiting process]" : s;
-      Debug.LogWarning(s);
+      Debug.LogWarning("Can't connect. State = " + state);
       return;
     }
-    isWaitingCallback = true;
+    state = States.Connecting;
     Debug.Log("[" + Time.time + "]: Start connecting.");
     BluetoothLEHardwareInterface.ConnectToPeripheral(
     deviceAddress, (ad) =>
     {
       state = States.Connected;
-      isWaitingCallback = false;
       Debug.Log("[" + Time.time + "]: Connected. Address = " + ad);
     }, (ad, su) =>
     {
@@ -167,7 +161,6 @@ public class BleHandler : MonoBehaviour
         //   if (_foundCharacteristicUUID)
         //   {
         //     state = States.Connected;
-        //     isWaitingCallback = false;
         //   }
       }
     }, (disconnectAddress) =>
@@ -175,33 +168,28 @@ public class BleHandler : MonoBehaviour
       // TODO: Check Algorythm.
       Debug.Log("Disconnected");
       // Reset();
-      // isWaitingCallback = false;
     });
-    while (isWaitingCallback) await UniTask.Yield(PlayerLoopTiming.Update);
-    await UniTask.Delay(5000);
+    while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
   }
 
   public async void OnDisconnect() { await Disconnect(); }
 
   async UniTask Disconnect()
   {
-    if (state != States.Connected || isWaitingCallback)
+    if (state != States.Connected)
     {
-      string s = "You are not connected. State = " + state;
-      s = isWaitingCallback ? s + " [waiting process]" : s;
-      Debug.LogWarning(s);
+      Debug.LogWarning("Can't disconnect. State = " + state);
       return;
     }
-    isWaitingCallback = true;
+    state = States.Disconnecting;
     Debug.Log("[" + Time.time + "]: Start disconnecting.");
     BluetoothLEHardwareInterface.DisconnectPeripheral(
       deviceAddress, (ad) =>
       {
         state = States.FoundButNotConnected;
-        isWaitingCallback = false;
         Debug.Log("[" + Time.time + "]: Disconnected. Address = " + ad);
       });
-    while (isWaitingCallback) await UniTask.Yield(PlayerLoopTiming.Update);
+    while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
   }
 
   string FullUUID(string uuid)
@@ -219,20 +207,28 @@ public class BleHandler : MonoBehaviour
     return (uuid1.ToUpper().Equals(uuid2.ToUpper()));
   }
 
+  bool IsWaitingCallback()
+  {
+    return state == States.Initializing || state == States.Scaning ||
+      state == States.Connecting || state == States.Disconnecting ||
+      state == States.Deinitializing;
+  }
+
   public void ReadByte()
   {
-    if (state != States.Connected || isWaitingCallback)
+    if (state != States.Connected)
     {
-      string s = "You are not connected. State = " + state;
-      s = isWaitingCallback ? s + " [waiting process]" : s;
-      Debug.LogWarning(s);
+      Debug.LogWarning("Can't read. State = " + state);
       return;
     }
+    state = States.Reading;
     Debug.Log("Read bytes");
     BluetoothLEHardwareInterface.ReadCharacteristic(
     deviceAddress, serviceUUID, readCharacteristicUUID,
     (characteristic, bytes) =>
     {
+      // Read action callback doesn't work in Editor mode.
+      state = States.Connected;
       Debug.Log("Read Succeeded");
       string str = System.Text.Encoding.ASCII.GetString(bytes);
       readEvent.Invoke(str);
@@ -242,13 +238,12 @@ public class BleHandler : MonoBehaviour
   public void WriteByte(string value)
   {
     // TODO: Connect input field
-    if (state != States.Connected || isWaitingCallback)
+    if (state != States.Connected)
     {
-      string s = "You are not connected. State = " + state;
-      s = isWaitingCallback ? s + " [waiting process]" : s;
-      Debug.LogWarning(s);
+      Debug.LogWarning("Can't write. State = " + state);
       return;
     }
+    state = States.Writing;
     Debug.Log("Write bytes");
     byte[] data = System.Text.Encoding.ASCII.GetBytes(value);
     Debug.Log(data);
@@ -256,6 +251,7 @@ public class BleHandler : MonoBehaviour
     deviceAddress, serviceUUID, writeCharacteristicUUID, data, data.Length,
     true, (characteristicUUID) =>
     {
+      state = States.Connected;
       Debug.Log("Write Succeeded");
     });
   }

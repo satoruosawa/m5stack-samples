@@ -12,54 +12,40 @@ public class StatusText : MonoBehaviour
     switch (bleHandler.state)
     {
       case BleHandler.States.NotInitialized:
-        if (!bleHandler.isWaitingCallback)
-        {
-          statusUgui.text = "Not initialized";
-        }
-        else
-        {
-          statusUgui.text = "Initializing";
-        }
+        statusUgui.text = "Not initialized";
+        break;
+      case BleHandler.States.Initializing:
+        statusUgui.text = "Initializing";
         break;
       case BleHandler.States.InitializationError:
-        if (!bleHandler.isWaitingCallback)
-        {
-          statusUgui.text = "Initialization error";
-        }
-        else
-        {
-          statusUgui.text = "Error ie wc";
-        }
+        statusUgui.text = "Initialization error";
         break;
       case BleHandler.States.NotFound:
-        if (!bleHandler.isWaitingCallback)
-        {
-          statusUgui.text = "Initialized";
-        }
-        else
-        {
-          statusUgui.text = "Scanning";
-        }
+        statusUgui.text = "Initialized";
+        break;
+      case BleHandler.States.Scaning:
+        statusUgui.text = "Scanning";
         break;
       case BleHandler.States.FoundButNotConnected:
-        if (!bleHandler.isWaitingCallback)
-        {
-          statusUgui.text = "Found Device";
-        }
-        else
-        {
-          statusUgui.text = "Connecting";
-        }
+        statusUgui.text = "Found Device";
+        break;
+      case BleHandler.States.Connecting:
+        statusUgui.text = "Connecting";
         break;
       case BleHandler.States.Connected:
-        if (!bleHandler.isWaitingCallback)
-        {
-          statusUgui.text = "Connected";
-        }
-        else
-        {
-          statusUgui.text = "Disconnecting";
-        }
+        statusUgui.text = "Connected";
+        break;
+      case BleHandler.States.Disconnecting:
+        statusUgui.text = "Disconnecting";
+        break;
+      case BleHandler.States.Deinitializing:
+        statusUgui.text = "Deinitializing";
+        break;
+      case BleHandler.States.Reading:
+        statusUgui.text = "Reading";
+        break;
+      case BleHandler.States.Writing:
+        statusUgui.text = "Writing";
         break;
       default:
         break;
