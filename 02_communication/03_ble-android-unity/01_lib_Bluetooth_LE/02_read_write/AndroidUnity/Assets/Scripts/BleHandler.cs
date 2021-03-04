@@ -80,12 +80,21 @@ public class BleHandler : MonoBehaviour
 
   async UniTask Deinitialize()
   {
+    if (state == States.NotInitialized)
+    {
+      Debug.LogWarning("NotInitialized");
+      return;
+    }
+    if (state == States.Connected)
+    {
+      await Disconnect();
+    }
     while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
     state = States.Deinitializing;
     Debug.Log("[" + Time.time + "]: Start deinitialize.");
     BluetoothLEHardwareInterface.DeInitialize(() =>
     {
-      state = States.NotInitialized;
+      Reset();
       Debug.Log("[" + Time.time + "]: End deinitialize.");
     });
     while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
@@ -119,6 +128,8 @@ public class BleHandler : MonoBehaviour
       if (Time.time > scanStart + scanTimeout)
       {
         BluetoothLEHardwareInterface.StopScan();
+        Reset();
+        state = States.NotFound;
         Debug.LogWarning("[" + Time.time + "]: Scan timeout.");
         break;
       }
