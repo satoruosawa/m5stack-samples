@@ -16,7 +16,7 @@ public class BleHandler : MonoBehaviour
   {
     NotInitialized,
     Initializing,
-    InitializationError, // Change InitializationError to Error
+    Error,
     NotFound,
     Scaning,
     FoundButNotConnected,
@@ -70,9 +70,8 @@ public class BleHandler : MonoBehaviour
       Debug.Log("[" + Time.time + "]: End initialize.");
     }, (error) =>
     {
-      //TODO: Change InitializationError to Error
-      state = States.InitializationError;
-      Debug.LogError("Error during initialize: " + error);
+      state = States.Error;
+      Debug.LogError("Error: " + error);
     });
     while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
     await UniTask.Delay(100);
@@ -214,31 +213,10 @@ public class BleHandler : MonoBehaviour
     while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
   }
 
-  string FullUUID(string uuid)
-  {
-    string fullUUID = uuid;
-    if (fullUUID.Length == 4)
-      fullUUID = "0000" + uuid + "-0000-1000-8000-00805f9b34fb";
-    return fullUUID;
-  }
+  public async void OnReadCharacteristic() { await ReadCharacteristic(); }
 
-  bool IsEqual(string uuid1, string uuid2)
+  async UniTask ReadCharacteristic()
   {
-    uuid1 = FullUUID(uuid1);
-    uuid2 = FullUUID(uuid2);
-    return (uuid1.ToUpper().Equals(uuid2.ToUpper()));
-  }
-
-  bool IsWaitingCallback()
-  {
-    return state == States.Initializing || state == States.Scaning ||
-      state == States.Connecting || state == States.Disconnecting ||
-      state == States.Deinitializing;
-  }
-
-  public void ReadCharacteristic()
-  {
-    // TODO: Make Async
     if (state != States.Connected)
     {
       Debug.LogWarning("Can't read. State = " + state);
@@ -261,11 +239,16 @@ public class BleHandler : MonoBehaviour
       Debug.Log("Read Succeeded. " + value);
       readEvent.Invoke(value);
     });
+    while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
   }
 
-  public void WriteCharacteristic(string value)
+  public async void OnWriteCharacteristic(string value)
   {
-    // TODO: Make Async
+    await WriteCharacteristic(value);
+  }
+
+  async UniTask WriteCharacteristic(string value)
+  {
     if (state != States.Connected)
     {
       Debug.LogWarning("Can't write. State = " + state);
@@ -287,5 +270,29 @@ public class BleHandler : MonoBehaviour
       state = States.Connected;
       Debug.Log("Read Succeeded. " + value);
     });
+    while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
+  }
+
+  string FullUUID(string uuid)
+  {
+    string fullUUID = uuid;
+    if (fullUUID.Length == 4)
+      fullUUID = "0000" + uuid + "-0000-1000-8000-00805f9b34fb";
+    return fullUUID;
+  }
+
+  bool IsEqual(string uuid1, string uuid2)
+  {
+    uuid1 = FullUUID(uuid1);
+    uuid2 = FullUUID(uuid2);
+    return (uuid1.ToUpper().Equals(uuid2.ToUpper()));
+  }
+
+  bool IsWaitingCallback()
+  {
+    return state == States.Initializing || state == States.Scaning ||
+      state == States.Connecting || state == States.Disconnecting ||
+      state == States.Deinitializing || state == States.Reading ||
+      state == States.Writing;
   }
 }

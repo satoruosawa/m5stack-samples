@@ -1522,7 +1522,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 231317605}
         m_TargetAssemblyTypeName: BleHandler, Assembly-CSharp
-        m_MethodName: ReadCharacteristic
+        m_MethodName: OnReadCharacteristic
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -2490,7 +2490,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 231317605}
         m_TargetAssemblyTypeName: BleHandler, Assembly-CSharp
-        m_MethodName: WriteCharacteristic
+        m_MethodName: OnWriteCharacteristic
         m_Mode: 0
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
