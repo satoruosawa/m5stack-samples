@@ -74,6 +74,7 @@ public class BleHandler : MonoBehaviour
       Debug.LogError("Error during initialize: " + error);
     });
     while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
+    await UniTask.Delay(100);
   }
 
   public async void OnDeinitialize() { await Deinitialize(); }
@@ -85,11 +86,15 @@ public class BleHandler : MonoBehaviour
       Debug.LogWarning("NotInitialized");
       return;
     }
+    while (IsWaitingCallback())
+    {
+      if (state == States.Deinitializing) return;
+      await UniTask.Yield(PlayerLoopTiming.Update);
+    }
     if (state == States.Connected)
     {
       await Disconnect();
     }
-    while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
     state = States.Deinitializing;
     Debug.Log("[" + Time.time + "]: Start deinitialize.");
     BluetoothLEHardwareInterface.DeInitialize(() =>
@@ -135,6 +140,7 @@ public class BleHandler : MonoBehaviour
       }
       await UniTask.Yield(PlayerLoopTiming.Update);
     }
+    await UniTask.Delay(500);
   }
 
   public async void OnConnect() { await Connect(); }
@@ -183,6 +189,7 @@ public class BleHandler : MonoBehaviour
       Debug.Log("[" + Time.time + "]: Disconnected. Address = " + ad);
     });
     while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
+    await UniTask.Delay(2000);
   }
 
   public async void OnDisconnect() { await Disconnect(); }

@@ -85,7 +85,8 @@ void refreshRate() {
 void loop() {
   refreshRate();
   if (deviceConnected) {
-    M5.Lcd.println("                      ");
+    M5.Lcd.setCursor(0, 18);
+    M5.Lcd.println("Connected             ");
   }
   if (!deviceConnected && oldDeviceConnected) {
     delay(500);
