@@ -222,15 +222,15 @@ public class BleHandler : MonoBehaviour
     }
     state = States.Subscribing;
     Debug.Log("Start Subscribe.");
-    BluetoothLEHardwareInterface.SubscribeCharacteristicWithDeviceAddress(
+    BluetoothLEHardwareInterface.SubscribeCharacteristic(
       deviceAddress, serviceUUID, notifyCharacteristicUUID,
-      (address, characteristic) =>
+      (characteristic) =>
       {
         // Notification action callback doesn't work in Editor mode.
         state = States.Connected;
         isNotificationSubscribed = true;
         Debug.Log("Subscribe Succeeded.");
-      }, (address, characteristicUUID, bytes) =>
+      }, (characteristicUUID, bytes) =>
       {
         string value = System.Text.Encoding.ASCII.GetString(bytes);
         Debug.Log("Received. value = " + value);

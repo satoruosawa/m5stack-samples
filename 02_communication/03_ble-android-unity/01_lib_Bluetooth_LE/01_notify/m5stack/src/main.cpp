@@ -1,3 +1,4 @@
+#include <BLE2902.h>
 #include <BLEDevice.h>
 #include <M5Stack.h>
 
@@ -38,6 +39,7 @@ void setup() {
   BLEService* pService = pServer->createService(SERVICE_UUID);
   pCharacteristic = pService->createCharacteristic(
       CHARACTERISTIC_UUID, BLECharacteristic::PROPERTY_NOTIFY);
+  pCharacteristic->addDescriptor(new BLE2902());
   pCharacteristic->setCallbacks(new MyCharacteristicCallbacks());
   pCharacteristic->setValue((uint8_t*)&value, 4);
   pService->start();
@@ -69,14 +71,18 @@ void refreshRate() {
 void loop() {
   refreshRate();
   if (deviceConnected) {
-    pCharacteristic->setValue((uint8_t*)&value, 4);
-    pCharacteristic->notify();
     M5.Lcd.setCursor(0, 18);
     M5.Lcd.println("Connected             ");
-    M5.Lcd.setCursor(0, 36);
-    M5.Lcd.printf("Count%3d               ", value);
-    value++;
-    delay(10);
+    static unsigned long prevUpdate = 0;
+    if (millis() > prevUpdate + 1000) {
+      prevUpdate = millis();
+      pCharacteristic->setValue((uint8_t*)&value, 4);
+      pCharacteristic->notify();
+      M5.Lcd.setCursor(0, 36);
+      M5.Lcd.printf("Count%3d", value);
+      value++;
+      delay(10);
+    }
   }
   if (!deviceConnected && oldDeviceConnected) {
     delay(500);
