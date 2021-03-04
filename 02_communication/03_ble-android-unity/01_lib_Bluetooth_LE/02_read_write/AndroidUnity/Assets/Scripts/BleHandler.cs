@@ -24,14 +24,18 @@ public class BleHandler : MonoBehaviour
   public bool isWaitingCallback { get; private set; }
 
   string deviceAddress;
-  bool _foundCharacteristicUUID = false;
+  bool foundServiceUUID = false;
+  bool foundReadCharacteristicUUID = false;
+  bool foundWriteCharacteristicUUID = false;
 
   async void Start()
   {
     state = States.NotInitialized;
     isWaitingCallback = false;
     deviceAddress = null;
-    _foundCharacteristicUUID = false;
+    foundServiceUUID = false;
+    foundReadCharacteristicUUID = false;
+    foundWriteCharacteristicUUID = false;
     await Initialize();
     await Scan();
     await Connect();
@@ -94,11 +98,11 @@ public class BleHandler : MonoBehaviour
     {
       if (name.Contains(deviceName))
       {
-        Debug.Log("[" + Time.time + "]: Found " + name);
         BluetoothLEHardwareInterface.StopScan();
         deviceAddress = address;
         state = States.FoundButNotConnected;
         isWaitingCallback = false;
+        Debug.Log("[" + Time.time + "]: Found " + name);
       }
     });
     float scanStart = Time.time;
@@ -128,14 +132,13 @@ public class BleHandler : MonoBehaviour
       return;
     }
     isWaitingCallback = true;
-    _foundCharacteristicUUID = false;
     Debug.Log("[" + Time.time + "]: Start connecting.");
-    // TODO: Add timeout.
     BluetoothLEHardwareInterface.ConnectToPeripheral(
     deviceAddress, (ad) =>
     {
-      Debug.Log("[" + Time.time + "]: Connected. Address = " + ad);
       state = States.Connected;
+      isWaitingCallback = false;
+      Debug.Log("[" + Time.time + "]: Connected. Address = " + ad);
     }, (ad, su) =>
     {
       if (IsEqual(su, serviceUUID))
@@ -172,7 +175,7 @@ public class BleHandler : MonoBehaviour
       // TODO: Check Algorythm.
       Debug.Log("Disconnected");
       // Reset();
-      isWaitingCallback = false;
+      // isWaitingCallback = false;
     });
     while (isWaitingCallback) await UniTask.Yield(PlayerLoopTiming.Update);
     await UniTask.Delay(5000);
@@ -182,7 +185,23 @@ public class BleHandler : MonoBehaviour
 
   async UniTask Disconnect()
   {
-    // TODO:
+    if (state != States.Connected || isWaitingCallback)
+    {
+      string s = "You are not connected. State = " + state;
+      s = isWaitingCallback ? s + " [waiting process]" : s;
+      Debug.LogWarning(s);
+      return;
+    }
+    isWaitingCallback = true;
+    Debug.Log("[" + Time.time + "]: Start disconnecting.");
+    BluetoothLEHardwareInterface.DisconnectPeripheral(
+      deviceAddress, (ad) =>
+      {
+        state = States.FoundButNotConnected;
+        isWaitingCallback = false;
+        Debug.Log("[" + Time.time + "]: Disconnected. Address = " + ad);
+      });
+    while (isWaitingCallback) await UniTask.Yield(PlayerLoopTiming.Update);
   }
 
   string FullUUID(string uuid)
@@ -202,7 +221,13 @@ public class BleHandler : MonoBehaviour
 
   public void ReadByte()
   {
-    if (state != States.Connected) return;
+    if (state != States.Connected || isWaitingCallback)
+    {
+      string s = "You are not connected. State = " + state;
+      s = isWaitingCallback ? s + " [waiting process]" : s;
+      Debug.LogWarning(s);
+      return;
+    }
     Debug.Log("Read bytes");
     BluetoothLEHardwareInterface.ReadCharacteristic(
     deviceAddress, serviceUUID, readCharacteristicUUID,
@@ -214,11 +239,17 @@ public class BleHandler : MonoBehaviour
     });
   }
 
-  public void SendByte(string value)
+  public void WriteByte(string value)
   {
     // TODO: Connect input field
-    if (state != States.Connected) return;
-    Debug.Log("Send bytes");
+    if (state != States.Connected || isWaitingCallback)
+    {
+      string s = "You are not connected. State = " + state;
+      s = isWaitingCallback ? s + " [waiting process]" : s;
+      Debug.LogWarning(s);
+      return;
+    }
+    Debug.Log("Write bytes");
     byte[] data = System.Text.Encoding.ASCII.GetBytes(value);
     Debug.Log(data);
     BluetoothLEHardwareInterface.WriteCharacteristic(

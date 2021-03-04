@@ -54,11 +54,11 @@ public class StatusText : MonoBehaviour
       case BleHandler.States.Connected:
         if (!bleHandler.isWaitingCallback)
         {
-          statusUgui.text = "Error c nwc";
+          statusUgui.text = "Connected";
         }
         else
         {
-          statusUgui.text = "Connected";
+          statusUgui.text = "Disconnecting";
         }
         break;
       default:

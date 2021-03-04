@@ -2424,7 +2424,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 231317605}
         m_TargetAssemblyTypeName: BleHandler, Assembly-CSharp
-        m_MethodName: SendByte
+        m_MethodName: WriteByte
         m_Mode: 5
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -3120,7 +3120,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 231317605}
         m_TargetAssemblyTypeName: BleHandler, Assembly-CSharp
-        m_MethodName: Reconnect
+        m_MethodName: OnDisconnect
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
