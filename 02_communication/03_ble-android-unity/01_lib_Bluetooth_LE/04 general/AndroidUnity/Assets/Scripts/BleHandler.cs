@@ -1,12 +1,12 @@
+using Cysharp.Threading.Tasks;
+using System.Collections.Generic;
 using System;
 using UnityEngine.Events;
 using UnityEngine;
-using Cysharp.Threading.Tasks;
-using System.Collections.Generic;
 
 namespace M5BLE
 {
-  [Serializable] public class ReadEvent : UnityEvent<string> { }
+  [Serializable] public class BytesEvent : UnityEvent<byte[]> { }
 
   public class BleHandler : MonoBehaviour
   {
@@ -220,13 +220,13 @@ namespace M5BLE
     }
 
     public async void ReadCharacteristic(
-      string characteristicUUID, ReadEvent readEvent)
+      string characteristicUUID, BytesEvent readEvent)
     {
       await ReadCharacteristicTasl(characteristicUUID, readEvent);
     }
 
     public async UniTask ReadCharacteristicTasl(
-      string characteristicUUID, ReadEvent readEvent)
+      string characteristicUUID, BytesEvent readEvent)
     {
       if (state != States.Connected)
       {
@@ -247,9 +247,8 @@ namespace M5BLE
       {
         // Read action callback doesn't work in Editor mode.
         state = States.Connected;
-        string value = System.Text.Encoding.ASCII.GetString(bytes);
-        Debug.Log("Read Succeeded. " + value);
-        readEvent.Invoke(value);
+        Debug.Log("Read Succeeded.");
+        readEvent.Invoke(bytes);
       });
       while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
     }
@@ -283,17 +282,17 @@ namespace M5BLE
       true, (cu) =>
       {
         state = States.Connected;
-        Debug.Log("Read Succeeded. " + value);
+        Debug.Log("Write Succeeded. " + value);
       });
       while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
     }
 
     public async void Subscribe(
-      string characteristicUUID, ReadEvent notifyEvent)
+      string characteristicUUID, BytesEvent notifyEvent)
     { await SubscribeTask(characteristicUUID, notifyEvent); }
 
     public async UniTask SubscribeTask(
-      string characteristicUUID, ReadEvent notifyEvent)
+      string characteristicUUID, BytesEvent notifyEvent)
     {
       if (state != States.Connected)
       {
@@ -328,8 +327,8 @@ namespace M5BLE
         }, (characteristicUUID, bytes) =>
         {
           string value = System.Text.Encoding.ASCII.GetString(bytes);
-          Debug.Log("Received. value = " + value);
-          notifyEvent.Invoke(value);
+          Debug.Log("Notified.");
+          notifyEvent.Invoke(bytes);
         });
       while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
     }
