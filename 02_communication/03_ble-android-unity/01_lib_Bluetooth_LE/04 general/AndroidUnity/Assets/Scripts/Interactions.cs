@@ -1,6 +1,4 @@
-using System.Collections;
 using M5BLE;
-using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 
@@ -19,23 +17,23 @@ public class Interactions : MonoBehaviour
 
   }
 
-  public void OnReadCharacteristic()
+  public void ReadCharacteristic()
   {
-    bleHandler.OnReadCharacteristic(readCharacteristicUUID, readEvent);
+    bleHandler.ReadCharacteristic(readCharacteristicUUID, readEvent);
   }
 
-  public void OnWriteCharacteristic()
+  public void WriteCharacteristic()
   {
-    bleHandler.OnWriteCharacteristic(writeCharacteristicUUID, ugui.text);
+    bleHandler.WriteCharacteristic(writeCharacteristicUUID, ugui.text);
   }
 
-  public void OnSubscribeCharacteristic()
+  public void SubscribeCharacteristic()
   {
-    bleHandler.OnSubscribe(notifyCharacteristicUUID, notifyEvent);
+    bleHandler.Subscribe(notifyCharacteristicUUID, notifyEvent);
   }
 
-  public void OnUnsubscribeCharacteristic()
+  public void UnsubscribeCharacteristic()
   {
-    bleHandler.OnUnsubscribe(notifyCharacteristicUUID);
+    bleHandler.Unsubscribe(notifyCharacteristicUUID);
   }
 }

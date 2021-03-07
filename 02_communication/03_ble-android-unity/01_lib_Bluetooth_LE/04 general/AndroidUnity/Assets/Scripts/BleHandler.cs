@@ -12,11 +12,7 @@ namespace M5BLE
   {
     public string deviceName = "M5Stack";
     public string serviceUUID = "2220";
-    // public string readCharacteristicUUID = "2221";
-    // public string writeCharacteristicUUID = "2222";
     float scanTimeout = 10.0f; //sec
-                               // [Serializable] public class ReadEvent : UnityEvent<string> { }
-                               // [SerializeField] ReadEvent readEvent = new ReadEvent();
     public enum States
     {
       NotInitialized,
@@ -45,9 +41,6 @@ namespace M5BLE
     public States state { get; private set; }
 
     string deviceAddress = null;
-    bool foundServiceUUID = false;
-    // bool foundReadCharacteristicUUID = false;
-    // bool foundWriteCharacteristicUUID = false;
     List<UUID> uuids;
 
     BleHandler()
@@ -58,26 +51,23 @@ namespace M5BLE
     async void Start()
     {
       Reset();
-      await Initialize();
+      await InitializeTask();
       await UniTask.Delay(5000);
-      await Scan();
+      await ScanTask();
       await UniTask.Delay(5000);
-      await Connect();
+      await ConnectTask();
     }
 
     void Reset()
     {
       state = States.NotInitialized;
       deviceAddress = null;
-      foundServiceUUID = false;
       uuids.Clear();
-      // foundReadCharacteristicUUID = false;
-      // foundWriteCharacteristicUUID = false;
     }
 
-    public async void OnInitialize() { await Initialize(); }
+    public async void Initialize() { await InitializeTask(); }
 
-    async UniTask Initialize()
+    public async UniTask InitializeTask()
     {
       if (state != States.NotInitialized)
       {
@@ -99,9 +89,9 @@ namespace M5BLE
       await UniTask.Delay(100);
     }
 
-    public async void OnDeinitialize() { await Deinitialize(); }
+    public async void Deinitialize() { await DeinitializeTask(); }
 
-    async UniTask Deinitialize()
+    public async UniTask DeinitializeTask()
     {
       if (state == States.NotInitialized)
       {
@@ -115,7 +105,7 @@ namespace M5BLE
       }
       if (state == States.Connected)
       {
-        await Disconnect();
+        await DisconnectTask();
       }
       state = States.Deinitializing;
       Debug.Log("[" + Time.time + "]: Start deinitialize.");
@@ -127,9 +117,9 @@ namespace M5BLE
       while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
     }
 
-    public async void OnScan() { await Scan(); }
+    public async void Scan() { await ScanTask(); }
 
-    async UniTask Scan()
+    public async UniTask ScanTask()
     {
       if (state != States.NotFound)
       {
@@ -165,9 +155,9 @@ namespace M5BLE
       await UniTask.Delay(500);
     }
 
-    public async void OnConnect() { await Connect(); }
+    public async void Connect() { await ConnectTask(); }
 
-    async UniTask Connect()
+    public async UniTask ConnectTask()
     {
       if (state != States.FoundButNotConnected)
       {
@@ -183,7 +173,6 @@ namespace M5BLE
         Debug.Log("[" + Time.time + "]: Connected. Address = " + ad);
       }, (ad, su) =>
       {
-        foundServiceUUID = true;
         if (IsEqual(su, serviceUUID))
           Debug.Log("[" + Time.time + "]: Found Service UUID. UUID = " + su);
       },
@@ -209,9 +198,9 @@ namespace M5BLE
       await UniTask.Delay(2000);
     }
 
-    public async void OnDisconnect() { await Disconnect(); }
+    public async void Disconnect() { await DisconnectTask(); }
 
-    async UniTask Disconnect()
+    public async UniTask DisconnectTask()
     {
       if (state != States.Connected)
       {
@@ -230,13 +219,13 @@ namespace M5BLE
       while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
     }
 
-    public async void OnReadCharacteristic(
+    public async void ReadCharacteristic(
       string characteristicUUID, ReadEvent readEvent)
     {
-      await ReadCharacteristic(characteristicUUID, readEvent);
+      await ReadCharacteristicTasl(characteristicUUID, readEvent);
     }
 
-    async UniTask ReadCharacteristic(
+    public async UniTask ReadCharacteristicTasl(
       string characteristicUUID, ReadEvent readEvent)
     {
       if (state != States.Connected)
@@ -265,12 +254,14 @@ namespace M5BLE
       while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
     }
 
-    public async void OnWriteCharacteristic(string characteristicUUID, string value)
+    public async void WriteCharacteristic(
+      string characteristicUUID, string value)
     {
-      await WriteCharacteristic(characteristicUUID, value);
+      await WriteCharacteristicTask(characteristicUUID, value);
     }
 
-    async UniTask WriteCharacteristic(string characteristicUUID, string value)
+    public async UniTask WriteCharacteristicTask(
+      string characteristicUUID, string value)
     {
       if (state != States.Connected)
       {
@@ -297,11 +288,12 @@ namespace M5BLE
       while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
     }
 
-    public async void OnSubscribe(
+    public async void Subscribe(
       string characteristicUUID, ReadEvent notifyEvent)
-    { await Subscribe(characteristicUUID, notifyEvent); }
+    { await SubscribeTask(characteristicUUID, notifyEvent); }
 
-    async UniTask Subscribe(string characteristicUUID, ReadEvent notifyEvent)
+    public async UniTask SubscribeTask(
+      string characteristicUUID, ReadEvent notifyEvent)
     {
       if (state != States.Connected)
       {
@@ -342,10 +334,10 @@ namespace M5BLE
       while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
     }
 
-    public async void OnUnsubscribe(string characteristicUUID)
-    { await Unsubscribe(characteristicUUID); }
+    public async void Unsubscribe(string characteristicUUID)
+    { await UnsubscribeTask(characteristicUUID); }
 
-    async UniTask Unsubscribe(string characteristicUUID)
+    public async UniTask UnsubscribeTask(string characteristicUUID)
     {
       if (state != States.Connected)
       {
@@ -401,7 +393,8 @@ namespace M5BLE
       return state == States.Initializing || state == States.Scaning ||
         state == States.Connecting || state == States.Disconnecting ||
         state == States.Deinitializing || state == States.Reading ||
-        state == States.Writing;
+        state == States.Writing || state == States.Subscribing ||
+        state == States.Unsubscribing;
     }
   }
 }

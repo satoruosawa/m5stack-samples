@@ -406,8 +406,8 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 1774413290}
-        m_TargetAssemblyTypeName: BleHandler, Assembly-CSharp
-        m_MethodName: OnConnect
+        m_TargetAssemblyTypeName: M5BLE.BleHandler, Assembly-CSharp
+        m_MethodName: Connect
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -885,7 +885,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 2061813034}
         m_TargetAssemblyTypeName: Interactions, Assembly-CSharp
-        m_MethodName: OnUnsubscribeCharacteristic
+        m_MethodName: UnsubscribeCharacteristic
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -1039,7 +1039,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 2061813034}
         m_TargetAssemblyTypeName: Interactions, Assembly-CSharp
-        m_MethodName: OnSubscribeCharacteristic
+        m_MethodName: SubscribeCharacteristic
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -1632,7 +1632,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 2061813034}
         m_TargetAssemblyTypeName: Interactions, Assembly-CSharp
-        m_MethodName: OnReadCharacteristic
+        m_MethodName: ReadCharacteristic
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -1785,8 +1785,8 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 1774413290}
-        m_TargetAssemblyTypeName: BleHandler, Assembly-CSharp
-        m_MethodName: OnDeinitialize
+        m_TargetAssemblyTypeName: M5BLE.BleHandler, Assembly-CSharp
+        m_MethodName: Deinitialize
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -2616,7 +2616,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 2061813034}
         m_TargetAssemblyTypeName: Interactions, Assembly-CSharp
-        m_MethodName: OnWriteCharacteristic
+        m_MethodName: WriteCharacteristic
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -2769,8 +2769,8 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 1774413290}
-        m_TargetAssemblyTypeName: BleHandler, Assembly-CSharp
-        m_MethodName: OnInitialize
+        m_TargetAssemblyTypeName: M5BLE.BleHandler, Assembly-CSharp
+        m_MethodName: Initialize
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -3343,8 +3343,8 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 1774413290}
-        m_TargetAssemblyTypeName: BleHandler, Assembly-CSharp
-        m_MethodName: OnScan
+        m_TargetAssemblyTypeName: M5BLE.BleHandler, Assembly-CSharp
+        m_MethodName: Scan
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -3542,8 +3542,8 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 1774413290}
-        m_TargetAssemblyTypeName: BleHandler, Assembly-CSharp
-        m_MethodName: OnDisconnect
+        m_TargetAssemblyTypeName: M5BLE.BleHandler, Assembly-CSharp
+        m_MethodName: Disconnect
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
