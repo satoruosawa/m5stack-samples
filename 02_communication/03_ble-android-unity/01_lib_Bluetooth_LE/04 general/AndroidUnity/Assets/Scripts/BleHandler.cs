@@ -196,18 +196,6 @@ namespace M5BLE
             characteristic = cu
           };
           uuids.Add(uuid);
-          // if (IsEqual(cu, readCharacteristicUUID))
-          // {
-          //   foundReadCharacteristicUUID = true;
-          //   Debug.Log(
-          //     "[" + Time.time + "]: Found Characteristic UUID. UUID = " + cu);
-          // }
-          // else if (IsEqual(cu, writeCharacteristicUUID))
-          // {
-          //   foundWriteCharacteristicUUID = true;
-          //   Debug.Log(
-          //     "[" + Time.time + "]: Found Characteristic UUID. UUID = " + cu);
-          // }
         }
       }, (ad) =>
       {
@@ -264,7 +252,7 @@ namespace M5BLE
       Debug.Log("Read bytes");
       BluetoothLEHardwareInterface.ReadCharacteristic(
       deviceAddress, serviceUUID, characteristicUUID,
-      (characteristic, bytes) =>
+      (cu, bytes) =>
       {
         // Read action callback doesn't work in Editor mode.
         state = States.Connected;
@@ -275,36 +263,37 @@ namespace M5BLE
       while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
     }
 
-    // public async void OnWriteCharacteristic(string value)
-    // {
-    //   await WriteCharacteristic(value);
-    // }
+    public async void OnWriteCharacteristic(string characteristicUUID, string value)
+    {
+      await WriteCharacteristic(characteristicUUID, value);
+    }
 
-    // async UniTask WriteCharacteristic(string value)
-    // {
-    //   if (state != States.Connected)
-    //   {
-    //     Debug.LogWarning("Can't write. State = " + state);
-    //     return;
-    //   }
-    //   else if (!foundWriteCharacteristicUUID)
-    //   {
-    //     Debug.LogWarning("WriteCharacteristic is not found.");
-    //     return;
-    //   }
-    //   state = States.Writing;
-    //   Debug.Log("Write bytes");
-    //   byte[] data = System.Text.Encoding.ASCII.GetBytes(value);
-    //   Debug.Log(data);
-    //   BluetoothLEHardwareInterface.WriteCharacteristic(
-    //   deviceAddress, serviceUUID, writeCharacteristicUUID, data, data.Length,
-    //   true, (characteristicUUID) =>
-    //   {
-    //     state = States.Connected;
-    //     Debug.Log("Read Succeeded. " + value);
-    //   });
-    //   while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
-    // }
+    async UniTask WriteCharacteristic(string characteristicUUID, string value)
+    {
+      if (state != States.Connected)
+      {
+        Debug.LogWarning("Can't write. State = " + state);
+        return;
+      }
+      else if (uuids.FindIndex(uuid => (IsEqual(uuid.service, serviceUUID) &&
+        IsEqual(uuid.characteristic, characteristicUUID))) == -1)
+      {
+        Debug.LogWarning("WriteCharacteristic is not found.");
+        return;
+      }
+      state = States.Writing;
+      Debug.Log("Write bytes");
+      byte[] data = System.Text.Encoding.ASCII.GetBytes(value);
+      Debug.Log(data);
+      BluetoothLEHardwareInterface.WriteCharacteristic(
+      deviceAddress, serviceUUID, characteristicUUID, data, data.Length,
+      true, (cu) =>
+      {
+        state = States.Connected;
+        Debug.Log("Read Succeeded. " + value);
+      });
+      while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
+    }
 
     string FullUUID(string uuid)
     {
