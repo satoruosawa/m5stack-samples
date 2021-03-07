@@ -48,6 +48,12 @@ public class StatusText : MonoBehaviour
       case BleHandler.States.Writing:
         statusUgui.text = "Writing";
         break;
+      case BleHandler.States.Subscribing:
+        statusUgui.text = "Subscribing";
+        break;
+      case BleHandler.States.Unsubscribing:
+        statusUgui.text = "Unsubscribing";
+        break;
       default:
         break;
     }
