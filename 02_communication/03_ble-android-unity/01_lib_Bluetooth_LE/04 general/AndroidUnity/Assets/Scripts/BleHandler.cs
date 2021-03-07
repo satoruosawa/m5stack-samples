@@ -39,6 +39,7 @@ namespace M5BLE
     {
       public string service;
       public string characteristic;
+      public bool isSubscribing;
     }
 
     public States state { get; private set; }
@@ -193,7 +194,8 @@ namespace M5BLE
           UUID uuid = new UUID()
           {
             service = su,
-            characteristic = cu
+            characteristic = cu,
+            isSubscribing = false
           };
           uuids.Add(uuid);
         }
@@ -293,6 +295,90 @@ namespace M5BLE
         Debug.Log("Read Succeeded. " + value);
       });
       while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
+    }
+
+    public async void OnSubscribe(
+      string characteristicUUID, ReadEvent notifyEvent)
+    { await Subscribe(characteristicUUID, notifyEvent); }
+
+    async UniTask Subscribe(string characteristicUUID, ReadEvent notifyEvent)
+    {
+      if (state != States.Connected)
+      {
+        Debug.LogWarning("Can't subscribe. State = " + state);
+        return;
+      }
+      int uuidIndex = uuids.FindIndex(
+        uuid => (IsEqual(uuid.service, serviceUUID) &&
+        IsEqual(uuid.characteristic, characteristicUUID)));
+      if (uuidIndex == -1)
+      {
+        Debug.LogWarning("The notifyCharacteristic is not found.");
+        return;
+      }
+      if (uuids[uuidIndex].isSubscribing)
+      {
+        Debug.LogWarning("Already subscribing.");
+        return;
+      }
+      state = States.Subscribing;
+      Debug.Log("Start Subscribe.");
+      BluetoothLEHardwareInterface.SubscribeCharacteristic(
+        deviceAddress, serviceUUID, characteristicUUID,
+        (cu) =>
+        {
+          // Notification action callback doesn't work in Editor mode.
+          state = States.Connected;
+          UUID uuid = uuids[uuidIndex];
+          uuid.isSubscribing = true;
+          uuids[uuidIndex] = uuid;
+          Debug.Log("Subscribe Succeeded.");
+        }, (characteristicUUID, bytes) =>
+        {
+          string value = System.Text.Encoding.ASCII.GetString(bytes);
+          Debug.Log("Received. value = " + value);
+          notifyEvent.Invoke(value);
+        });
+      while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
+    }
+
+    public async void OnUnsubscribe(string characteristicUUID)
+    { await Unsubscribe(characteristicUUID); }
+
+    async UniTask Unsubscribe(string characteristicUUID)
+    {
+      if (state != States.Connected)
+      {
+        Debug.LogWarning("Can't unsubscrie. State = " + state);
+        return;
+      }
+      int uuidIndex = uuids.FindIndex(
+        uuid => (IsEqual(uuid.service, serviceUUID) &&
+        IsEqual(uuid.characteristic, characteristicUUID)));
+      if (uuidIndex == -1)
+      {
+        Debug.LogWarning("The notifyCharacteristic is not found.");
+        return;
+      }
+      if (!uuids[uuidIndex].isSubscribing)
+      {
+        Debug.LogWarning("Not subscribed.");
+        return;
+      }
+      state = States.Unsubscribing;
+      Debug.Log("Unsubscribe");
+      BluetoothLEHardwareInterface.UnSubscribeCharacteristic(
+        deviceAddress, serviceUUID, characteristicUUID,
+        (name) =>
+        {
+          state = States.Connected;
+          UUID uuid = uuids[uuidIndex];
+          uuid.isSubscribing = false;
+          uuids[uuidIndex] = uuid;
+          Debug.Log("Unsubscribe Succeeded. " + name);
+        });
+      while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
+      await UniTask.Delay(4000);
     }
 
     string FullUUID(string uuid)
