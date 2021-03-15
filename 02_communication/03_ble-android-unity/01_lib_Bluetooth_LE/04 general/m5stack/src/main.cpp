@@ -2,6 +2,7 @@
 #include <BLEDevice.h>
 #include <M5Stack.h>
 
+#define DEVICE_NAME "M5Stack BLE Sample"
 #define SERVICE_UUID "00002220-0000-1000-8000-00805F9B34FB"
 #define READ_CHARACTERISTIC_UUID "00002221-0000-1000-8000-00805F9B34FB"
 #define WRITE_CHARACTERISTIC_UUID "00002222-0000-1000-8000-00805F9B34FB"
@@ -54,7 +55,7 @@ class MyCharacteristicCallbacks : public BLECharacteristicCallbacks {
 
 void setup() {
   M5.begin();
-  BLEDevice::init("M5Stack");
+  BLEDevice::init(DEVICE_NAME);
   pServer = BLEDevice::createServer();
   pServer->setCallbacks(new MyServerCallbacks());
   BLEService* pService = pServer->createService(SERVICE_UUID);
@@ -77,6 +78,8 @@ void setup() {
   M5.Lcd.setCursor(0, 0);
   M5.Lcd.println("BLE General");
   M5.Lcd.setCursor(0, 18);
+  M5.Lcd.println(DEVICE_NAME);
+  M5.Lcd.setCursor(0, 36);
   M5.Lcd.println("Start advertising...  ");
 }
 
@@ -92,21 +95,21 @@ void refreshRate() {
     frame_count = 0;
     prev_time = millis() / 1000.0;
   }
-  M5.Lcd.setCursor(0, 54);
+  M5.Lcd.setCursor(0, 72);
   M5.Lcd.printf("Refresh Rate %5.2f", rate);
 }
 
 void loop() {
   refreshRate();
   if (deviceConnected) {
-    M5.Lcd.setCursor(0, 18);
+    M5.Lcd.setCursor(0, 36);
     M5.Lcd.println("Connected             ");
   }
   if (!deviceConnected && oldDeviceConnected) {
     delay(500);
     pServer->startAdvertising();
     Serial.println("Restart advertising");
-    M5.Lcd.setCursor(0, 18);
+    M5.Lcd.setCursor(0, 36);
     M5.Lcd.println("Restart advertising...");
     oldDeviceConnected = deviceConnected;
   }
@@ -122,7 +125,7 @@ void loop() {
     pNotifyCharacteristic->setValue(notifyValue);
     pNotifyCharacteristic->notify();
   }
-  M5.Lcd.setCursor(0, 36);
+  M5.Lcd.setCursor(0, 54);
   M5.Lcd.printf("R %-3d W %s N %-3d   ", readValue, receivedValue.c_str(),
                 notifyValue);
 }
