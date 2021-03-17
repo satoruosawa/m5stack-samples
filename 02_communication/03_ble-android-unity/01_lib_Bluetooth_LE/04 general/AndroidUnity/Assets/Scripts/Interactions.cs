@@ -30,13 +30,15 @@ namespace M5BLE
         readEvent.Invoke(value.ToString());
       });
       peripheralBleHandler.ReadCharacteristic(
-        serviceCharacteristicUUID, readCharacteristicUUID, readBytesEvent);
+        FullUuid(serviceCharacteristicUUID), FullUuid(readCharacteristicUUID),
+        readBytesEvent);
     }
 
     public void WriteCharacteristic()
     {
       peripheralBleHandler.WriteCharacteristic(
-        serviceCharacteristicUUID, writeCharacteristicUUID, ugui.text);
+        FullUuid(serviceCharacteristicUUID), FullUuid(writeCharacteristicUUID),
+        ugui.text);
     }
 
     public void SubscribeCharacteristic()
@@ -51,13 +53,23 @@ namespace M5BLE
         notifyEvent.Invoke(value.ToString());
       });
       peripheralBleHandler.Subscribe(
-        serviceCharacteristicUUID, notifyCharacteristicUUID, notifyBytesEvent);
+        FullUuid(serviceCharacteristicUUID), FullUuid(notifyCharacteristicUUID),
+        notifyBytesEvent);
     }
 
     public void UnsubscribeCharacteristic()
     {
       peripheralBleHandler.Unsubscribe(
-        serviceCharacteristicUUID, notifyCharacteristicUUID);
+        FullUuid(serviceCharacteristicUUID),
+        FullUuid(notifyCharacteristicUUID));
+    }
+
+    string FullUuid(string uuid)
+    {
+      string fullUUID = uuid;
+      if (fullUUID.Length == 4)
+        fullUUID = "0000" + uuid + "-0000-1000-8000-00805F9B34FB";
+      return fullUUID;
     }
   }
 }

@@ -161,12 +161,14 @@ namespace M5BLE
       }, null,
       (address, su, cu) =>
       {
+        string suKey = su.ToUpper();
+        string cuKey = cu.ToUpper();
+        if (!services.ContainsKey(suKey))
+        { services.Add(suKey, new Service(su)); }
+        if (!services[suKey].characteristics.ContainsKey(cuKey))
+        { services[suKey].characteristics.Add(cuKey, new Characteristic(cu)); }
         Debug.Log("[" + Time.time + "]: <Connect> Found Characteristics [" +
           su + "],[" + cu + "]");
-        if (!services.ContainsKey(su))
-        { services.Add(su, new Service(su)); }
-        if (!services[su].characteristics.ContainsKey(cu))
-        { services[su].characteristics.Add(cu, new Characteristic(cu)); }
       }, (ad) =>
       {
         Reset();
@@ -230,13 +232,14 @@ namespace M5BLE
     public async void ReadCharacteristic(
       string serviceUuid, string characteristicUuid, BytesEvent readEvent)
     {
-      await ReadCharacteristicTasl(
-        FullUuid(serviceUuid), FullUuid(characteristicUuid), readEvent);
+      await ReadCharacteristicTasl(serviceUuid, characteristicUuid, readEvent);
     }
 
     public async UniTask ReadCharacteristicTasl(
       string serviceUuid, string characteristicUuid, BytesEvent readEvent)
     {
+      string serviceUuidKey = serviceUuid.ToUpper();
+      string characteristicUuidKey = characteristicUuid.ToUpper();
       if (!centralBleHandler.IsInitialized())
       {
         Debug.LogWarning("<Read> Can't read. Central is not initialized.");
@@ -247,24 +250,25 @@ namespace M5BLE
         Debug.LogWarning("<Read> Can't read. State = " + state);
         return;
       }
-      else if (!services.ContainsKey(serviceUuid))
+      else if (!services.ContainsKey(serviceUuidKey))
       {
         Debug.LogWarning(
-          "<Read> The service is not found. uuid = " + serviceUuid);
+          "<Read> The service is not found. uuid = " + serviceUuidKey);
         return;
       }
-      else if (
-        !services[serviceUuid].characteristics.ContainsKey(characteristicUuid))
+      else if (!services[serviceUuidKey]
+        .characteristics.ContainsKey(characteristicUuidKey))
       {
         Debug.LogWarning("<Read> The characteristic is not found. uuid = " +
-          characteristicUuid);
+          characteristicUuidKey);
         return;
       }
       state = States.Reading;
       bool isWaitingCallback = true;
       Debug.Log("<Read> Read bytes");
       BluetoothLEHardwareInterface.ReadCharacteristic(
-      deviceAddress, serviceUuid, characteristicUuid,
+        deviceAddress, services[serviceUuidKey].uuid,
+        services[serviceUuidKey].characteristics[characteristicUuidKey].uuid,
       (cu, bytes) =>
       {
         // Read action callback doesn't work in Editor mode.
@@ -282,20 +286,21 @@ namespace M5BLE
           return;
         }
         await UniTask.Yield(PlayerLoopTiming.Update);
-        state = States.Connected;
       }
+      state = States.Connected;
     }
 
     public async void WriteCharacteristic(
       string serviceUuid, string characteristicUuid, string value)
     {
-      await WriteCharacteristicTask(
-        FullUuid(serviceUuid), FullUuid(characteristicUuid), value);
+      await WriteCharacteristicTask(serviceUuid, characteristicUuid, value);
     }
 
     public async UniTask WriteCharacteristicTask(
       string serviceUuid, string characteristicUuid, string value)
     {
+      string serviceUuidKey = serviceUuid.ToUpper();
+      string characteristicUuidKey = characteristicUuid.ToUpper();
       if (!centralBleHandler.IsInitialized())
       {
         Debug.LogWarning("<Write> Can't read. Central is not initialized.");
@@ -306,17 +311,17 @@ namespace M5BLE
         Debug.LogWarning("<Write> Can't write. State = " + state);
         return;
       }
-      else if (!services.ContainsKey(serviceUuid))
+      else if (!services.ContainsKey(serviceUuidKey))
       {
         Debug.LogWarning(
-          "<Write> The service is not found. uuid = " + serviceUuid);
+          "<Write> The service is not found. uuid = " + serviceUuidKey);
         return;
       }
-      else if (
-        !services[serviceUuid].characteristics.ContainsKey(characteristicUuid))
+      else if (!services[serviceUuidKey]
+        .characteristics.ContainsKey(characteristicUuidKey))
       {
         Debug.LogWarning("<Write> The characteristic is not found. uuid = " +
-          characteristicUuid);
+          characteristicUuidKey);
         return;
       }
       state = States.Writing;
@@ -325,7 +330,9 @@ namespace M5BLE
       byte[] data = System.Text.Encoding.ASCII.GetBytes(value);
       Debug.Log(data);
       BluetoothLEHardwareInterface.WriteCharacteristic(
-      deviceAddress, serviceUuid, characteristicUuid, data, data.Length,
+        deviceAddress, services[serviceUuidKey].uuid,
+        services[serviceUuidKey].characteristics[characteristicUuidKey].uuid,
+        data, data.Length,
       true, (cu) =>
       {
         isWaitingCallback = false;
@@ -341,20 +348,21 @@ namespace M5BLE
           return;
         }
         await UniTask.Yield(PlayerLoopTiming.Update);
-        state = States.Connected;
       }
+      state = States.Connected;
     }
 
     public async void Subscribe(
       string serviceUuid, string characteristicUuid, BytesEvent notifyEvent)
     {
-      await SubscribeTask(
-        FullUuid(serviceUuid), FullUuid(characteristicUuid), notifyEvent);
+      await SubscribeTask(serviceUuid, characteristicUuid, notifyEvent);
     }
 
     public async UniTask SubscribeTask(
       string serviceUuid, string characteristicUuid, BytesEvent notifyEvent)
     {
+      string serviceUuidKey = serviceUuid.ToUpper();
+      string characteristicUuidKey = characteristicUuid.ToUpper();
       if (!centralBleHandler.IsInitialized())
       {
         Debug.LogWarning(
@@ -366,22 +374,24 @@ namespace M5BLE
         Debug.LogWarning("<Subscribe> Can't subscribe. State = " + state);
         return;
       }
-      else if (!services.ContainsKey(serviceUuid))
+      else if (!services.ContainsKey(serviceUuidKey))
       {
         Debug.LogWarning("<Subscribe> The service is not found. uuid = " +
-          serviceUuid);
+          serviceUuidKey);
         return;
       }
       else if (
-        !services[serviceUuid].characteristics.ContainsKey(characteristicUuid))
+        !services[serviceUuidKey].characteristics
+        .ContainsKey(characteristicUuidKey))
       {
         Debug.LogWarning(
           "<Subscribe> The characteristic is not found. uuid = " +
-          characteristicUuid);
+          characteristicUuidKey);
         return;
       }
       else if (
-        services[serviceUuid].characteristics[characteristicUuid].isSubscribing)
+        services[serviceUuidKey].characteristics[characteristicUuidKey]
+        .isSubscribing)
       {
         Debug.LogWarning(
           "<Subscribe> The characteristic is already subscribed.");
@@ -391,12 +401,13 @@ namespace M5BLE
       bool isWaitingCallback = true;
       Debug.Log("<Subscribe> Start Subscribe.");
       BluetoothLEHardwareInterface.SubscribeCharacteristic(
-        deviceAddress, serviceUuid, characteristicUuid,
+        deviceAddress, services[serviceUuidKey].uuid,
+        services[serviceUuidKey].characteristics[characteristicUuidKey].uuid,
         (cu) =>
         {
           // Notification action callback doesn't work in Editor mode.
           isWaitingCallback = false;
-          services[serviceUuid].characteristics[characteristicUuid]
+          services[serviceUuidKey].characteristics[characteristicUuidKey]
             .isSubscribing = true;
           Debug.Log("<Subscribe> Subscribe Succeeded.");
         }, (characteristicUUID, bytes) =>
@@ -415,19 +426,20 @@ namespace M5BLE
           return;
         }
         await UniTask.Yield(PlayerLoopTiming.Update);
-        state = States.Connected;
       }
+      state = States.Connected;
     }
 
     public async void Unsubscribe(string serviceUuid, string characteristicUuid)
     {
-      await UnsubscribeTask(
-        FullUuid(serviceUuid), FullUuid(characteristicUuid));
+      await UnsubscribeTask(serviceUuid, characteristicUuid);
     }
 
     public async UniTask UnsubscribeTask(
       string serviceUuid, string characteristicUuid)
     {
+      string serviceUuidKey = serviceUuid.ToUpper();
+      string characteristicUuidKey = characteristicUuid.ToUpper();
       if (!centralBleHandler.IsInitialized())
       {
         Debug.LogWarning(
@@ -439,35 +451,38 @@ namespace M5BLE
         Debug.LogWarning("<Unsubscribe> Can't unsubscrie. State = " + state);
         return;
       }
-      else if (!services.ContainsKey(serviceUuid))
+      else if (!services.ContainsKey(serviceUuidKey))
       {
         Debug.LogWarning("<Unsubscribe> The service is not found. uuid = " +
-          serviceUuid);
+          serviceUuidKey);
         return;
       }
-      else if (
-        !services[serviceUuid].characteristics.ContainsKey(characteristicUuid))
+      else if (!services[serviceUuidKey]
+        .characteristics.ContainsKey(characteristicUuidKey))
       {
         Debug.LogWarning(
           "<Unsubscribe> The characteristic is not found. uuid = " +
-          characteristicUuid);
+          characteristicUuidKey);
         return;
       }
-      else if (
-       !services[serviceUuid].characteristics[characteristicUuid].isSubscribing)
+      else if (!services[serviceUuidKey]
+        .characteristics[characteristicUuidKey].isSubscribing)
       {
-        Debug.LogWarning("<Unsubscribe> The characteristic is not subscribed.");
+        Debug.LogWarning(
+          "<Unsubscribe> The characteristic is not subscribed. uuid = " +
+          characteristicUuidKey);
         return;
       }
       state = States.Unsubscribing;
       bool isWaitingCallback = true;
       Debug.Log("<Unsubscribe> Start unsubscribe");
       BluetoothLEHardwareInterface.UnSubscribeCharacteristic(
-        deviceAddress, serviceUuid, characteristicUuid,
+        deviceAddress, services[serviceUuidKey].uuid,
+        services[serviceUuidKey].characteristics[characteristicUuidKey].uuid,
         (name) =>
         {
           isWaitingCallback = false;
-          services[serviceUuid].characteristics[characteristicUuid]
+          services[serviceUuidKey].characteristics[characteristicUuidKey]
             .isSubscribing = false;
           Debug.Log("<Unsubscribe> Unsubscribe Succeeded. " + name);
         });
@@ -481,26 +496,9 @@ namespace M5BLE
           return;
         }
         await UniTask.Yield(PlayerLoopTiming.Update);
-        state = States.Connected;
       }
       await UniTask.Delay(4000);
-    }
-
-    string FullUuid(string uuid)
-    {
-      // TODO: Move to interaction.
-      string fullUUID = uuid;
-      if (fullUUID.Length == 4)
-        fullUUID = "0000" + uuid + "-0000-1000-8000-00805F9B34FB";
-      return fullUUID;
-    }
-
-    bool IsEqual(string uuid1, string uuid2)
-    {
-      // TODO: Delete.
-      uuid1 = FullUuid(uuid1);
-      uuid2 = FullUuid(uuid2);
-      return (uuid1.ToUpper().Equals(uuid2.ToUpper()));
+      state = States.Connected;
     }
 
     bool IsProcessing()
