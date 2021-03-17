@@ -8,23 +8,21 @@ namespace M5BLE
 {
   [Serializable] public class BytesEvent : UnityEvent<byte[]> { }
 
-  public class BleHandler : MonoBehaviour
+  public class PeripheralBleHandler : MonoBehaviour
   {
-    public string deviceName = "M5Stack";
+    [SerializeField] CentralBleHandler centralBleHandler = null;
+    public string deviceName = "M5Stack BLE Sample";
     public string serviceUUID = "2220";
     float scanTimeout = 10.0f; //sec
+
     public enum States
     {
-      NotInitialized,
-      Initializing,
-      Error,
       NotFound,
       Scaning,
       FoundButNotConnected,
       Connecting,
       Connected,
       Disconnecting,
-      Deinitializing,
       Reading,
       Writing,
       Subscribing,
@@ -43,78 +41,16 @@ namespace M5BLE
     string deviceAddress = null;
     List<UUID> uuids;
 
-    BleHandler()
+    PeripheralBleHandler()
     {
       uuids = new List<UUID>();
     }
 
-    async void Start()
-    {
-      Reset();
-      await InitializeTask();
-      await UniTask.Delay(5000);
-      await ScanTask();
-      await UniTask.Delay(5000);
-      await ConnectTask();
-    }
-
     void Reset()
     {
-      state = States.NotInitialized;
+      state = States.NotFound;
       deviceAddress = null;
       uuids.Clear();
-    }
-
-    public async void Initialize() { await InitializeTask(); }
-
-    public async UniTask InitializeTask()
-    {
-      if (state != States.NotInitialized)
-      {
-        Debug.LogWarning("Can't initialize. State = " + state);
-        return;
-      }
-      state = States.Initializing;
-      Debug.Log("[" + Time.time + "]: Start initialize.");
-      BluetoothLEHardwareInterface.Initialize(true, false, () =>
-      {
-        state = States.NotFound;
-        Debug.Log("[" + Time.time + "]: End initialize.");
-      }, (error) =>
-      {
-        state = States.Error;
-        Debug.LogError("Error: " + error);
-      });
-      while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
-      await UniTask.Delay(100);
-    }
-
-    public async void Deinitialize() { await DeinitializeTask(); }
-
-    public async UniTask DeinitializeTask()
-    {
-      if (state == States.NotInitialized)
-      {
-        Debug.LogWarning("NotInitialized");
-        return;
-      }
-      while (IsWaitingCallback())
-      {
-        if (state == States.Deinitializing) return;
-        await UniTask.Yield(PlayerLoopTiming.Update);
-      }
-      if (state == States.Connected)
-      {
-        await DisconnectTask();
-      }
-      state = States.Deinitializing;
-      Debug.Log("[" + Time.time + "]: Start deinitialize.");
-      BluetoothLEHardwareInterface.DeInitialize(() =>
-      {
-        Reset();
-        Debug.Log("[" + Time.time + "]: End deinitialize.");
-      });
-      while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
     }
 
     public async void Scan() { await ScanTask(); }
@@ -389,9 +325,9 @@ namespace M5BLE
 
     bool IsWaitingCallback()
     {
-      return state == States.Initializing || state == States.Scaning ||
+      return state == States.Scaning ||
         state == States.Connecting || state == States.Disconnecting ||
-        state == States.Deinitializing || state == States.Reading ||
+        state == States.Reading ||
         state == States.Writing || state == States.Subscribing ||
         state == States.Unsubscribing;
     }
