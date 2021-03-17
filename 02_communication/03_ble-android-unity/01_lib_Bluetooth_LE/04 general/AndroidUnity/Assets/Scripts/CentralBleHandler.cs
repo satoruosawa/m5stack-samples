@@ -1,6 +1,4 @@
 using Cysharp.Threading.Tasks;
-using System.Collections.Generic;
-using System;
 using UnityEngine.Events;
 using UnityEngine;
 
@@ -8,6 +6,8 @@ namespace M5BLE
 {
   public class CentralBleHandler : MonoBehaviour
   {
+    [SerializeField] UnityEvent initializedEvent = new UnityEvent();
+    [SerializeField] UnityEvent deinitializedEvent = new UnityEvent();
     public States state { get; private set; }
     public enum States
     {
@@ -17,6 +17,8 @@ namespace M5BLE
       Deinitializing,
       Error
     }
+
+    CentralBleHandler() { Reset(); }
 
     void Reset() { state = States.NotInitialized; }
 
@@ -30,45 +32,56 @@ namespace M5BLE
         return;
       }
       state = States.Initializing;
+      bool isWaitingCallback = true;
       Debug.Log("[" + Time.time + "]: Start initialize.");
       BluetoothLEHardwareInterface.Initialize(true, false, () =>
       {
-        state = States.Initialized;
+        isWaitingCallback = false;
         Debug.Log("[" + Time.time + "]: End initialize.");
       }, (error) =>
       {
         state = States.Error;
         Debug.LogError("Error: " + error);
       });
-      while (IsProcessing()) await UniTask.Yield(PlayerLoopTiming.Update);
-      await UniTask.Delay(100);
+      while (isWaitingCallback)
+      {
+        if (IsError()) return;
+        await UniTask.Yield(PlayerLoopTiming.Update);
+      }
+      await UniTask.Delay(500);
+      state = States.Initialized;
+      initializedEvent.Invoke();
     }
 
     public async void Deinitialize() { await DeinitializeTask(); }
 
     public async UniTask DeinitializeTask()
     {
-      if (state == States.NotInitialized)
+      if (state != States.Initialized)
       {
-        Debug.LogWarning("NotInitialized");
+        Debug.LogWarning("Can't deinitialize. Central is not initialized");
         return;
       }
-      while (IsProcessing())
-      {
-        if (state == States.Deinitializing) return;
-        await UniTask.Yield(PlayerLoopTiming.Update);
-      }
       state = States.Deinitializing;
+      bool isWaitingCallback = true;
       Debug.Log("[" + Time.time + "]: Start deinitialize.");
       BluetoothLEHardwareInterface.DeInitialize(() =>
       {
-        Reset();
+        isWaitingCallback = false;
         Debug.Log("[" + Time.time + "]: End deinitialize.");
       });
-      while (IsProcessing()) await UniTask.Yield(PlayerLoopTiming.Update);
+      while (isWaitingCallback)
+      {
+        if (IsError()) return;
+        await UniTask.Yield(PlayerLoopTiming.Update);
+      }
+      await UniTask.Delay(500);
+      state = States.NotInitialized;
+      deinitializedEvent.Invoke();
     }
 
-    bool IsProcessing()
-    { return state == States.Initializing || state == States.Deinitializing; }
+    bool IsError() { return state == States.Error; }
+
+    public bool IsInitialized() { return state == States.Initialized; }
   }
 }

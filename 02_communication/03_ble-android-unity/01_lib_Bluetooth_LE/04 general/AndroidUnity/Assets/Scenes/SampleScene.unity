@@ -3607,7 +3607,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 245d1cf37d8cb4badab737eddb69d91d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  centralBleHandler: {fileID: 0}
+  centralBleHandler: {fileID: 1774413291}
   deviceName: M5Stack BLE Sample
   serviceUUID: 2220
 --- !u!114 &1774413291
@@ -3622,6 +3622,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 589e9be628e5d476aa7de130d7873387, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  initializedEvent:
+    m_PersistentCalls:
+      m_Calls: []
+  deinitializedEvent:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1 &1905978438
 GameObject:
   m_ObjectHideFlags: 0

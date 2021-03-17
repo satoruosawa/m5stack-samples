@@ -9,6 +9,7 @@ namespace M5BLE
 
   public class Interactions : MonoBehaviour
   {
+    public string serviceCharacteristicUUID = "2220";
     public string readCharacteristicUUID = "2221";
     public string writeCharacteristicUUID = "2222";
     public string notifyCharacteristicUUID = "2223";
@@ -16,11 +17,6 @@ namespace M5BLE
     [SerializeField] TextEvent readEvent = new TextEvent();
     [SerializeField] TextEvent notifyEvent = new TextEvent();
     [SerializeField] TextMeshProUGUI ugui = null;
-
-    void Start()
-    {
-
-    }
 
     public void ReadCharacteristic()
     {
@@ -33,12 +29,14 @@ namespace M5BLE
         Debug.Log(value);
         readEvent.Invoke(value.ToString());
       });
-      peripheralBleHandler.ReadCharacteristic(readCharacteristicUUID, readBytesEvent);
+      peripheralBleHandler.ReadCharacteristic(
+        serviceCharacteristicUUID, readCharacteristicUUID, readBytesEvent);
     }
 
     public void WriteCharacteristic()
     {
-      peripheralBleHandler.WriteCharacteristic(writeCharacteristicUUID, ugui.text);
+      peripheralBleHandler.WriteCharacteristic(
+        serviceCharacteristicUUID, writeCharacteristicUUID, ugui.text);
     }
 
     public void SubscribeCharacteristic()
@@ -52,12 +50,14 @@ namespace M5BLE
         Debug.Log(value);
         notifyEvent.Invoke(value.ToString());
       });
-      peripheralBleHandler.Subscribe(notifyCharacteristicUUID, notifyBytesEvent);
+      peripheralBleHandler.Subscribe(
+        serviceCharacteristicUUID, notifyCharacteristicUUID, notifyBytesEvent);
     }
 
     public void UnsubscribeCharacteristic()
     {
-      peripheralBleHandler.Unsubscribe(notifyCharacteristicUUID);
+      peripheralBleHandler.Unsubscribe(
+        serviceCharacteristicUUID, notifyCharacteristicUUID);
     }
   }
 }

@@ -12,14 +12,14 @@ public class PeripheralStatusText : MonoBehaviour
   {
     switch (peripheralBleHandler.state)
     {
-      case PeripheralBleHandler.States.NotFound:
-        statusUgui.text = "NotFound";
+      case PeripheralBleHandler.States.NotFoundPeripheral:
+        statusUgui.text = "Not found";
         break;
-      case PeripheralBleHandler.States.Scaning:
+      case PeripheralBleHandler.States.Scanning:
         statusUgui.text = "Scanning";
         break;
       case PeripheralBleHandler.States.FoundButNotConnected:
-        statusUgui.text = "Found Device";
+        statusUgui.text = "Found peripheral";
         break;
       case PeripheralBleHandler.States.Connecting:
         statusUgui.text = "Connecting";

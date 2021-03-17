@@ -10,15 +10,10 @@ namespace M5BLE
 
   public class PeripheralBleHandler : MonoBehaviour
   {
-    [SerializeField] CentralBleHandler centralBleHandler = null;
-    public string deviceName = "M5Stack BLE Sample";
-    public string serviceUUID = "2220";
-    float scanTimeout = 10.0f; //sec
-
     public enum States
     {
-      NotFound,
-      Scaning,
+      NotFoundPeripheral,
+      Scanning,
       FoundButNotConnected,
       Connecting,
       Connected,
@@ -29,41 +24,75 @@ namespace M5BLE
       Unsubscribing
     }
 
-    public struct UUID
+    public class Service
     {
-      public string service;
-      public string characteristic;
-      public bool isSubscribing;
+      public string uuid;
+      public Dictionary<string, Characteristic> characteristics;
+      public Service(string serviceUuid)
+      {
+        uuid = serviceUuid;
+        characteristics = new Dictionary<string, Characteristic>();
+      }
     }
 
+    public class Characteristic
+    {
+      public string uuid;
+      public bool isSubscribing;
+      public Characteristic(string characteristicUuid)
+      {
+        uuid = characteristicUuid;
+        isSubscribing = false;
+      }
+    }
+
+    // References
+    [SerializeField] CentralBleHandler centralBleHandler = null;
+    // Settings
+    public string deviceName = "M5Stack BLE Sample";
+    float scanTimeout = 10.0f; //sec
+
+    // Public variable
     public States state { get; private set; }
 
+    // Private variables
     string deviceAddress = null;
-    List<UUID> uuids;
+    public Dictionary<string, Service> services { get; private set; }
 
     PeripheralBleHandler()
     {
-      uuids = new List<UUID>();
+      services = new Dictionary<string, Service>();
+      Reset();
     }
+
+    void Update()
+    { if (!IsProcessing() && !centralBleHandler.IsInitialized()) Reset(); }
 
     void Reset()
     {
-      state = States.NotFound;
+      state = States.NotFoundPeripheral;
       deviceAddress = null;
-      uuids.Clear();
+      services.Clear();
     }
 
     public async void Scan() { await ScanTask(); }
 
     public async UniTask ScanTask()
     {
-      if (state != States.NotFound)
+      if (!centralBleHandler.IsInitialized())
       {
-        Debug.LogWarning("Can't scan. State = " + state);
+        Debug.LogWarning("<Scan> Can't scan. Central is not initialized.");
         return;
       }
-      Debug.Log("[" + Time.time + "]: Start Scanning for " + deviceName);
-      state = States.Scaning;
+      else if (state != States.NotFoundPeripheral)
+      {
+        // TODO: Make sure it can NOT really scan.
+        Debug.LogWarning("<Scan> Can't scan. State = " + state);
+        return;
+      }
+      state = States.Scanning;
+      bool isWaitingCallback = true;
+      Debug.Log("[" + Time.time + "]: <Scan> Start Scanning for " + deviceName);
       BluetoothLEHardwareInterface.ScanForPeripheralsWithServices(
       null, (address, name) =>
       {
@@ -71,265 +100,415 @@ namespace M5BLE
         {
           BluetoothLEHardwareInterface.StopScan();
           deviceAddress = address;
-          state = States.FoundButNotConnected;
-          Debug.Log("[" + Time.time + "]: Found " + name);
+          isWaitingCallback = false;
+          Debug.Log("[" + Time.time + "]: <Scan> Found " + name);
         }
       });
       float scanStart = Time.time;
-      while (IsWaitingCallback())
+      while (isWaitingCallback)
       {
-        if (Time.time > scanStart + scanTimeout)
+        if (!centralBleHandler.IsInitialized())
         {
           BluetoothLEHardwareInterface.StopScan();
           Reset();
-          state = States.NotFound;
-          Debug.LogWarning("[" + Time.time + "]: Scan timeout.");
-          break;
+          Debug.LogWarning("[" + Time.time +
+            "]: <Scan> Cancel scan. Central is not initialized.");
+          return;
+        }
+        else if (state != States.Scanning)
+        {
+          BluetoothLEHardwareInterface.StopScan();
+          Debug.LogWarning("[" + Time.time +
+            "]: <Scan> Cancel scan. State changed externally.");
+          return;
+        }
+        else if (Time.time > scanStart + scanTimeout)
+        {
+          BluetoothLEHardwareInterface.StopScan();
+          Reset();
+          Debug.LogWarning("[" + Time.time + "]: <Scan> Cancel scan. Timeout.");
+          return;
         }
         await UniTask.Yield(PlayerLoopTiming.Update);
       }
       await UniTask.Delay(500);
+      state = States.FoundButNotConnected;
     }
 
     public async void Connect() { await ConnectTask(); }
 
     public async UniTask ConnectTask()
     {
-      if (state != States.FoundButNotConnected)
+      if (!centralBleHandler.IsInitialized())
       {
-        Debug.LogWarning("Can't connect. State = " + state);
+        Debug.LogWarning(
+          "<Connect> Can't connect. Central is not initialized.");
+        return;
+      }
+      else if (state != States.FoundButNotConnected)
+      {
+        Debug.LogWarning("<Connect> Can't connect. State = " + state);
         return;
       }
       state = States.Connecting;
-      Debug.Log("[" + Time.time + "]: Start connecting.");
+      bool isWaitingCallback = true;
+      Debug.Log("[" + Time.time + "]: <Connect> Start connecting.");
       BluetoothLEHardwareInterface.ConnectToPeripheral(
       deviceAddress, (ad) =>
       {
-        state = States.Connected;
-        Debug.Log("[" + Time.time + "]: Connected. Address = " + ad);
-      }, (ad, su) =>
-      {
-        if (IsEqual(su, serviceUUID))
-          Debug.Log("[" + Time.time + "]: Found Service UUID. UUID = " + su);
-      },
+        isWaitingCallback = false;
+        Debug.Log("[" + Time.time + "]: <Connect> Connected. Address = " + ad);
+      }, null,
       (address, su, cu) =>
       {
-        if (IsEqual(su, serviceUUID))
-        {
-          UUID uuid = new UUID()
-          {
-            service = su,
-            characteristic = cu,
-            isSubscribing = false
-          };
-          uuids.Add(uuid);
-        }
+        Debug.Log("[" + Time.time + "]: <Connect> Found Characteristics [" +
+          su + "],[" + cu + "]");
+        if (!services.ContainsKey(su))
+        { services.Add(su, new Service(su)); }
+        if (!services[su].characteristics.ContainsKey(cu))
+        { services[su].characteristics.Add(cu, new Characteristic(cu)); }
       }, (ad) =>
       {
         Reset();
-        state = States.NotFound;
-        Debug.Log("[" + Time.time + "]: Disconnected. Address = " + ad);
+        Debug.Log("[" + Time.time +
+          "]: <Connect> Callback disconnected action. Address = " + ad);
       });
-      while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
+      while (isWaitingCallback)
+      {
+        if (!centralBleHandler.IsInitialized())
+        {
+          Reset();
+          Debug.LogWarning("[" + Time.time +
+            "]: <Connect> Cancel connect. Central is not initialized.");
+          return;
+        }
+        await UniTask.Yield(PlayerLoopTiming.Update);
+      }
       await UniTask.Delay(2000);
+      state = States.Connected;
     }
 
     public async void Disconnect() { await DisconnectTask(); }
 
     public async UniTask DisconnectTask()
     {
-      if (state != States.Connected)
+      if (!centralBleHandler.IsInitialized())
       {
-        Debug.LogWarning("Can't disconnect. State = " + state);
+        Debug.LogWarning(
+          "<Disconnect> Can't disconnect. Central is not initialized.");
+        return;
+      }
+      else if (state != States.Connected)
+      {
+        Debug.LogWarning("<Disconnect> Can't disconnect. State = " + state);
         return;
       }
       state = States.Disconnecting;
-      Debug.Log("[" + Time.time + "]: Start disconnecting.");
+      bool isWaitingCallback = true;
+      Debug.Log("[" + Time.time + "]: <Disconnect> Start disconnecting.");
       BluetoothLEHardwareInterface.DisconnectPeripheral(
         deviceAddress, (ad) =>
         {
-          Reset();
-          state = States.NotFound;
-          Debug.Log("[" + Time.time + "]: Disconnected. Address = " + ad);
+          isWaitingCallback = false;
+          Debug.Log("[" + Time.time +
+            "]: <Disconnect> Disconnected. Address = " + ad);
         });
-      while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
+      while (isWaitingCallback)
+      {
+        if (!centralBleHandler.IsInitialized())
+        {
+          Reset();
+          Debug.LogWarning("[" + Time.time +
+              "]: <Disconnect> Cancel disconnect. Central is not initialized.");
+          return;
+        }
+        await UniTask.Yield(PlayerLoopTiming.Update);
+      }
+      Reset();
     }
 
     public async void ReadCharacteristic(
-      string characteristicUUID, BytesEvent readEvent)
+      string serviceUuid, string characteristicUuid, BytesEvent readEvent)
     {
-      await ReadCharacteristicTasl(characteristicUUID, readEvent);
+      await ReadCharacteristicTasl(
+        FullUuid(serviceUuid), FullUuid(characteristicUuid), readEvent);
     }
 
     public async UniTask ReadCharacteristicTasl(
-      string characteristicUUID, BytesEvent readEvent)
+      string serviceUuid, string characteristicUuid, BytesEvent readEvent)
     {
-      if (state != States.Connected)
+      if (!centralBleHandler.IsInitialized())
       {
-        Debug.LogWarning("Can't read. State = " + state);
+        Debug.LogWarning("<Read> Can't read. Central is not initialized.");
         return;
       }
-      else if (uuids.FindIndex(uuid => (IsEqual(uuid.service, serviceUUID) &&
-        IsEqual(uuid.characteristic, characteristicUUID))) == -1)
+      else if (state != States.Connected)
       {
-        Debug.LogWarning("ReadCharacteristic is not found.");
+        Debug.LogWarning("<Read> Can't read. State = " + state);
+        return;
+      }
+      else if (!services.ContainsKey(serviceUuid))
+      {
+        Debug.LogWarning(
+          "<Read> The service is not found. uuid = " + serviceUuid);
+        return;
+      }
+      else if (
+        !services[serviceUuid].characteristics.ContainsKey(characteristicUuid))
+      {
+        Debug.LogWarning("<Read> The characteristic is not found. uuid = " +
+          characteristicUuid);
         return;
       }
       state = States.Reading;
-      Debug.Log("Read bytes");
+      bool isWaitingCallback = true;
+      Debug.Log("<Read> Read bytes");
       BluetoothLEHardwareInterface.ReadCharacteristic(
-      deviceAddress, serviceUUID, characteristicUUID,
+      deviceAddress, serviceUuid, characteristicUuid,
       (cu, bytes) =>
       {
         // Read action callback doesn't work in Editor mode.
-        state = States.Connected;
-        Debug.Log("Read Succeeded.");
+        isWaitingCallback = false;
+        Debug.Log("<Read> Read Succeeded.");
         readEvent.Invoke(bytes);
       });
-      while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
+      while (isWaitingCallback)
+      {
+        if (!centralBleHandler.IsInitialized())
+        {
+          Reset();
+          Debug.LogWarning("[" + Time.time +
+            "]: <Read> Cancel read. Central is not initialized.");
+          return;
+        }
+        await UniTask.Yield(PlayerLoopTiming.Update);
+        state = States.Connected;
+      }
     }
 
     public async void WriteCharacteristic(
-      string characteristicUUID, string value)
+      string serviceUuid, string characteristicUuid, string value)
     {
-      await WriteCharacteristicTask(characteristicUUID, value);
+      await WriteCharacteristicTask(
+        FullUuid(serviceUuid), FullUuid(characteristicUuid), value);
     }
 
     public async UniTask WriteCharacteristicTask(
-      string characteristicUUID, string value)
+      string serviceUuid, string characteristicUuid, string value)
     {
-      if (state != States.Connected)
+      if (!centralBleHandler.IsInitialized())
       {
-        Debug.LogWarning("Can't write. State = " + state);
+        Debug.LogWarning("<Write> Can't read. Central is not initialized.");
         return;
       }
-      else if (uuids.FindIndex(uuid => (IsEqual(uuid.service, serviceUUID) &&
-        IsEqual(uuid.characteristic, characteristicUUID))) == -1)
+      else if (state != States.Connected)
       {
-        Debug.LogWarning("WriteCharacteristic is not found.");
+        Debug.LogWarning("<Write> Can't write. State = " + state);
+        return;
+      }
+      else if (!services.ContainsKey(serviceUuid))
+      {
+        Debug.LogWarning(
+          "<Write> The service is not found. uuid = " + serviceUuid);
+        return;
+      }
+      else if (
+        !services[serviceUuid].characteristics.ContainsKey(characteristicUuid))
+      {
+        Debug.LogWarning("<Write> The characteristic is not found. uuid = " +
+          characteristicUuid);
         return;
       }
       state = States.Writing;
-      Debug.Log("Write bytes");
+      bool isWaitingCallback = true;
+      Debug.Log("<Write> Write value");
       byte[] data = System.Text.Encoding.ASCII.GetBytes(value);
       Debug.Log(data);
       BluetoothLEHardwareInterface.WriteCharacteristic(
-      deviceAddress, serviceUUID, characteristicUUID, data, data.Length,
+      deviceAddress, serviceUuid, characteristicUuid, data, data.Length,
       true, (cu) =>
       {
-        state = States.Connected;
-        Debug.Log("Write Succeeded. " + value);
+        isWaitingCallback = false;
+        Debug.Log("<Write> Write Succeeded. " + value);
       });
-      while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
+      while (isWaitingCallback)
+      {
+        if (!centralBleHandler.IsInitialized())
+        {
+          Reset();
+          Debug.LogWarning("[" + Time.time +
+            "]: <Write> Cancel write. Central is not initialized.");
+          return;
+        }
+        await UniTask.Yield(PlayerLoopTiming.Update);
+        state = States.Connected;
+      }
     }
 
     public async void Subscribe(
-      string characteristicUUID, BytesEvent notifyEvent)
-    { await SubscribeTask(characteristicUUID, notifyEvent); }
+      string serviceUuid, string characteristicUuid, BytesEvent notifyEvent)
+    {
+      await SubscribeTask(
+        FullUuid(serviceUuid), FullUuid(characteristicUuid), notifyEvent);
+    }
 
     public async UniTask SubscribeTask(
-      string characteristicUUID, BytesEvent notifyEvent)
+      string serviceUuid, string characteristicUuid, BytesEvent notifyEvent)
     {
-      if (state != States.Connected)
+      if (!centralBleHandler.IsInitialized())
       {
-        Debug.LogWarning("Can't subscribe. State = " + state);
+        Debug.LogWarning(
+          "<Subscribe> Can't subscribe. Central is not initialized.");
         return;
       }
-      int uuidIndex = uuids.FindIndex(
-        uuid => (IsEqual(uuid.service, serviceUUID) &&
-        IsEqual(uuid.characteristic, characteristicUUID)));
-      if (uuidIndex == -1)
+      else if (state != States.Connected)
       {
-        Debug.LogWarning("The notifyCharacteristic is not found.");
+        Debug.LogWarning("<Subscribe> Can't subscribe. State = " + state);
         return;
       }
-      if (uuids[uuidIndex].isSubscribing)
+      else if (!services.ContainsKey(serviceUuid))
       {
-        Debug.LogWarning("Already subscribing.");
+        Debug.LogWarning("<Subscribe> The service is not found. uuid = " +
+          serviceUuid);
+        return;
+      }
+      else if (
+        !services[serviceUuid].characteristics.ContainsKey(characteristicUuid))
+      {
+        Debug.LogWarning(
+          "<Subscribe> The characteristic is not found. uuid = " +
+          characteristicUuid);
+        return;
+      }
+      else if (
+        services[serviceUuid].characteristics[characteristicUuid].isSubscribing)
+      {
+        Debug.LogWarning(
+          "<Subscribe> The characteristic is already subscribed.");
         return;
       }
       state = States.Subscribing;
-      Debug.Log("Start Subscribe.");
+      bool isWaitingCallback = true;
+      Debug.Log("<Subscribe> Start Subscribe.");
       BluetoothLEHardwareInterface.SubscribeCharacteristic(
-        deviceAddress, serviceUUID, characteristicUUID,
+        deviceAddress, serviceUuid, characteristicUuid,
         (cu) =>
         {
           // Notification action callback doesn't work in Editor mode.
-          state = States.Connected;
-          UUID uuid = uuids[uuidIndex];
-          uuid.isSubscribing = true;
-          uuids[uuidIndex] = uuid;
-          Debug.Log("Subscribe Succeeded.");
+          isWaitingCallback = false;
+          services[serviceUuid].characteristics[characteristicUuid]
+            .isSubscribing = true;
+          Debug.Log("<Subscribe> Subscribe Succeeded.");
         }, (characteristicUUID, bytes) =>
         {
           string value = System.Text.Encoding.ASCII.GetString(bytes);
-          Debug.Log("Notified.");
+          Debug.Log("<Subscribe> Notified.");
           notifyEvent.Invoke(bytes);
         });
-      while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
+      while (isWaitingCallback)
+      {
+        if (!centralBleHandler.IsInitialized())
+        {
+          Reset();
+          Debug.LogWarning("[" + Time.time +
+            "]: <Subscribe> Cancel subscribe. Central is not initialized.");
+          return;
+        }
+        await UniTask.Yield(PlayerLoopTiming.Update);
+        state = States.Connected;
+      }
     }
 
-    public async void Unsubscribe(string characteristicUUID)
-    { await UnsubscribeTask(characteristicUUID); }
-
-    public async UniTask UnsubscribeTask(string characteristicUUID)
+    public async void Unsubscribe(string serviceUuid, string characteristicUuid)
     {
-      if (state != States.Connected)
+      await UnsubscribeTask(
+        FullUuid(serviceUuid), FullUuid(characteristicUuid));
+    }
+
+    public async UniTask UnsubscribeTask(
+      string serviceUuid, string characteristicUuid)
+    {
+      if (!centralBleHandler.IsInitialized())
       {
-        Debug.LogWarning("Can't unsubscrie. State = " + state);
+        Debug.LogWarning(
+          "<Unsubscribe> Can't unsubscrie. Central is not initialized.");
         return;
       }
-      int uuidIndex = uuids.FindIndex(
-        uuid => (IsEqual(uuid.service, serviceUUID) &&
-        IsEqual(uuid.characteristic, characteristicUUID)));
-      if (uuidIndex == -1)
+      else if (state != States.Connected)
       {
-        Debug.LogWarning("The notifyCharacteristic is not found.");
+        Debug.LogWarning("<Unsubscribe> Can't unsubscrie. State = " + state);
         return;
       }
-      if (!uuids[uuidIndex].isSubscribing)
+      else if (!services.ContainsKey(serviceUuid))
       {
-        Debug.LogWarning("Not subscribed.");
+        Debug.LogWarning("<Unsubscribe> The service is not found. uuid = " +
+          serviceUuid);
+        return;
+      }
+      else if (
+        !services[serviceUuid].characteristics.ContainsKey(characteristicUuid))
+      {
+        Debug.LogWarning(
+          "<Unsubscribe> The characteristic is not found. uuid = " +
+          characteristicUuid);
+        return;
+      }
+      else if (
+       !services[serviceUuid].characteristics[characteristicUuid].isSubscribing)
+      {
+        Debug.LogWarning("<Unsubscribe> The characteristic is not subscribed.");
         return;
       }
       state = States.Unsubscribing;
-      Debug.Log("Unsubscribe");
+      bool isWaitingCallback = true;
+      Debug.Log("<Unsubscribe> Start unsubscribe");
       BluetoothLEHardwareInterface.UnSubscribeCharacteristic(
-        deviceAddress, serviceUUID, characteristicUUID,
+        deviceAddress, serviceUuid, characteristicUuid,
         (name) =>
         {
-          state = States.Connected;
-          UUID uuid = uuids[uuidIndex];
-          uuid.isSubscribing = false;
-          uuids[uuidIndex] = uuid;
-          Debug.Log("Unsubscribe Succeeded. " + name);
+          isWaitingCallback = false;
+          services[serviceUuid].characteristics[characteristicUuid]
+            .isSubscribing = false;
+          Debug.Log("<Unsubscribe> Unsubscribe Succeeded. " + name);
         });
-      while (IsWaitingCallback()) await UniTask.Yield(PlayerLoopTiming.Update);
+      while (isWaitingCallback)
+      {
+        if (!centralBleHandler.IsInitialized())
+        {
+          Reset();
+          Debug.LogWarning("[" + Time.time +
+            "]: <Unsubscribe> Cancel unsubscribe. Central is not initialized.");
+          return;
+        }
+        await UniTask.Yield(PlayerLoopTiming.Update);
+        state = States.Connected;
+      }
       await UniTask.Delay(4000);
     }
 
-    string FullUUID(string uuid)
+    string FullUuid(string uuid)
     {
+      // TODO: Move to interaction.
       string fullUUID = uuid;
       if (fullUUID.Length == 4)
-        fullUUID = "0000" + uuid + "-0000-1000-8000-00805f9b34fb";
+        fullUUID = "0000" + uuid + "-0000-1000-8000-00805F9B34FB";
       return fullUUID;
     }
 
     bool IsEqual(string uuid1, string uuid2)
     {
-      uuid1 = FullUUID(uuid1);
-      uuid2 = FullUUID(uuid2);
+      // TODO: Delete.
+      uuid1 = FullUuid(uuid1);
+      uuid2 = FullUuid(uuid2);
       return (uuid1.ToUpper().Equals(uuid2.ToUpper()));
     }
 
-    bool IsWaitingCallback()
+    bool IsProcessing()
     {
-      return state == States.Scaning ||
+      return state == States.Scanning ||
         state == States.Connecting || state == States.Disconnecting ||
-        state == States.Reading ||
-        state == States.Writing || state == States.Subscribing ||
-        state == States.Unsubscribing;
+        state == States.Reading || state == States.Writing ||
+        state == States.Subscribing || state == States.Unsubscribing;
     }
   }
 }

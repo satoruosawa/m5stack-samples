@@ -13,7 +13,7 @@ public class CentralStatusText : MonoBehaviour
     switch (centralBleHandler.state)
     {
       case CentralBleHandler.States.NotInitialized:
-        statusUgui.text = "NotInitialized";
+        statusUgui.text = "Not initialized";
         break;
       case CentralBleHandler.States.Initializing:
         statusUgui.text = "Initializing";
