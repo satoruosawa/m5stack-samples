@@ -1,13 +1,12 @@
 using Cysharp.Threading.Tasks;
-using UnityEngine.Events;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace M5BLE
 {
   public class CentralBleHandler : MonoBehaviour
   {
-    [SerializeField] UnityEvent initializedEvent = new UnityEvent();
-    [SerializeField] UnityEvent deinitializedEvent = new UnityEvent();
+    [SerializeField] List<PeripheralBleHandler> peripherals = null;
     public States state { get; private set; }
     public enum States
     {
@@ -50,7 +49,6 @@ namespace M5BLE
       }
       await UniTask.Delay(500);
       state = States.Initialized;
-      initializedEvent.Invoke();
     }
 
     public async void Deinitialize() { await DeinitializeTask(); }
@@ -61,6 +59,19 @@ namespace M5BLE
       {
         Debug.LogWarning("Can't deinitialize. Central is not initialized");
         return;
+      }
+      foreach (var peripheral in peripherals)
+      {
+        if (peripheral.state == PeripheralBleHandler.States.Connected)
+        {
+          Debug.LogWarning("Can't deinitialize. Peripheral is connected.");
+          return;
+        }
+        else if (peripheral.IsProcessing())
+        {
+          Debug.LogWarning("Can't deinitialize. Peripheral is processing.");
+          return;
+        }
       }
       state = States.Deinitializing;
       bool isWaitingCallback = true;
@@ -77,7 +88,6 @@ namespace M5BLE
       }
       await UniTask.Delay(500);
       state = States.NotInitialized;
-      deinitializedEvent.Invoke();
     }
 
     bool IsError() { return state == States.Error; }

@@ -48,6 +48,7 @@ namespace M5BLE
 
     // References
     [SerializeField] CentralBleHandler centralBleHandler = null;
+
     // Settings
     public string deviceName = "M5Stack BLE Sample";
     float scanTimeout = 10.0f; //sec
@@ -501,7 +502,7 @@ namespace M5BLE
       state = States.Connected;
     }
 
-    bool IsProcessing()
+    public bool IsProcessing()
     {
       return state == States.Scanning ||
         state == States.Connecting || state == States.Disconnecting ||

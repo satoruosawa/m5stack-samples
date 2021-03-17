@@ -405,8 +405,8 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1774413290}
-        m_TargetAssemblyTypeName: M5BLE.BleHandler, Assembly-CSharp
+      - m_Target: {fileID: 1728849971}
+        m_TargetAssemblyTypeName: M5BLE.PeripheralBleHandler, Assembly-CSharp
         m_MethodName: Connect
         m_Mode: 1
         m_Arguments:
@@ -1353,9 +1353,9 @@ RectTransform:
   - {fileID: 659932022}
   - {fileID: 483516169}
   - {fileID: 1244021848}
-  - {fileID: 1093829564}
   - {fileID: 1502720794}
   - {fileID: 958728207}
+  - {fileID: 1093829564}
   - {fileID: 1758567068}
   - {fileID: 261376454}
   - {fileID: 1905978439}
@@ -1714,7 +1714,7 @@ RectTransform:
   m_Children:
   - {fileID: 693787183}
   m_Father: {fileID: 718088568}
-  m_RootOrder: 13
+  m_RootOrder: 12
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
@@ -2084,7 +2084,7 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 718088568}
-  m_RootOrder: 11
+  m_RootOrder: 13
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
@@ -2104,7 +2104,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   statusUgui: {fileID: 1093829566}
-  peripheralBleHandler: {fileID: 1774413290}
+  peripheralBleHandler: {fileID: 1728849971}
 --- !u!114 &1093829566
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2868,7 +2868,7 @@ RectTransform:
   m_Children:
   - {fileID: 309132789}
   m_Father: {fileID: 718088568}
-  m_RootOrder: 12
+  m_RootOrder: 11
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
@@ -3409,6 +3409,51 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Padding: {x: -8, y: -5, z: -8, w: -5}
   m_Softness: {x: 0, y: 0}
+--- !u!1 &1728849970
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1728849972}
+  - component: {fileID: 1728849971}
+  m_Layer: 0
+  m_Name: Peripheral
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1728849971
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1728849970}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 245d1cf37d8cb4badab737eddb69d91d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  centralBleHandler: {fileID: 1774413291}
+  deviceName: M5Stack BLE Sample
+--- !u!4 &1728849972
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1728849970}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 1972275593}
+  m_RootOrder: 1
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1758567067
 GameObject:
   m_ObjectHideFlags: 0
@@ -3513,8 +3558,8 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1774413290}
-        m_TargetAssemblyTypeName: M5BLE.BleHandler, Assembly-CSharp
+      - m_Target: {fileID: 1728849971}
+        m_TargetAssemblyTypeName: M5BLE.PeripheralBleHandler, Assembly-CSharp
         m_MethodName: Scan
         m_Mode: 1
         m_Arguments:
@@ -3573,9 +3618,8 @@ GameObject:
   m_Component:
   - component: {fileID: 1774413289}
   - component: {fileID: 1774413291}
-  - component: {fileID: 1774413290}
   m_Layer: 0
-  m_Name: BLE Handler
+  m_Name: Central
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -3588,28 +3632,13 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1774413288}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
-  m_Father: {fileID: 0}
-  m_RootOrder: 2
+  m_Father: {fileID: 1972275593}
+  m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1774413290
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1774413288}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 245d1cf37d8cb4badab737eddb69d91d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  centralBleHandler: {fileID: 1774413291}
-  deviceName: M5Stack BLE Sample
-  serviceUUID: 2220
 --- !u!114 &1774413291
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3622,12 +3651,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 589e9be628e5d476aa7de130d7873387, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  initializedEvent:
-    m_PersistentCalls:
-      m_Calls: []
-  deinitializedEvent:
-    m_PersistentCalls:
-      m_Calls: []
+  peripherals:
+  - {fileID: 1728849971}
 --- !u!1 &1905978438
 GameObject:
   m_ObjectHideFlags: 0
@@ -3732,8 +3757,8 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1774413290}
-        m_TargetAssemblyTypeName: M5BLE.BleHandler, Assembly-CSharp
+      - m_Target: {fileID: 1728849971}
+        m_TargetAssemblyTypeName: M5BLE.PeripheralBleHandler, Assembly-CSharp
         m_MethodName: Disconnect
         m_Mode: 1
         m_Arguments:
@@ -4071,6 +4096,38 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1968072070}
   m_CullTransparentMesh: 1
+--- !u!1 &1972275592
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1972275593}
+  m_Layer: 0
+  m_Name: BLE Handlers
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1972275593
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1972275592}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children:
+  - {fileID: 1774413289}
+  - {fileID: 1728849972}
+  m_Father: {fileID: 0}
+  m_RootOrder: 2
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2061813033
 GameObject:
   m_ObjectHideFlags: 0
@@ -4100,10 +4157,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 428a32a0053ec45988cd0b9a34d372b2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  serviceCharacteristicUUID: 2220
   readCharacteristicUUID: 2221
   writeCharacteristicUUID: 2222
   notifyCharacteristicUUID: 2223
-  peripheralBleHandler: {fileID: 1774413290}
+  peripheralBleHandler: {fileID: 1728849971}
   readEvent:
     m_PersistentCalls:
       m_Calls:
