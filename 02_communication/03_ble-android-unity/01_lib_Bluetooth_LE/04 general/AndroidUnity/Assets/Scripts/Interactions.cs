@@ -9,18 +9,14 @@ namespace M5BLE
 
   public class Interactions : MonoBehaviour
   {
+    public string serviceCharacteristicUUID = "2220";
     public string readCharacteristicUUID = "2221";
     public string writeCharacteristicUUID = "2222";
     public string notifyCharacteristicUUID = "2223";
-    [SerializeField] BleHandler bleHandler = null;
+    [SerializeField] PeripheralBleHandler peripheralBleHandler = null;
     [SerializeField] TextEvent readEvent = new TextEvent();
     [SerializeField] TextEvent notifyEvent = new TextEvent();
     [SerializeField] TextMeshProUGUI ugui = null;
-
-    void Start()
-    {
-
-    }
 
     public void ReadCharacteristic()
     {
@@ -33,12 +29,16 @@ namespace M5BLE
         Debug.Log(value);
         readEvent.Invoke(value.ToString());
       });
-      bleHandler.ReadCharacteristic(readCharacteristicUUID, readBytesEvent);
+      peripheralBleHandler.ReadCharacteristic(
+        FullUuid(serviceCharacteristicUUID), FullUuid(readCharacteristicUUID),
+        readBytesEvent);
     }
 
     public void WriteCharacteristic()
     {
-      bleHandler.WriteCharacteristic(writeCharacteristicUUID, ugui.text);
+      peripheralBleHandler.WriteCharacteristic(
+        FullUuid(serviceCharacteristicUUID), FullUuid(writeCharacteristicUUID),
+        ugui.text);
     }
 
     public void SubscribeCharacteristic()
@@ -52,12 +52,24 @@ namespace M5BLE
         Debug.Log(value);
         notifyEvent.Invoke(value.ToString());
       });
-      bleHandler.Subscribe(notifyCharacteristicUUID, notifyBytesEvent);
+      peripheralBleHandler.Subscribe(
+        FullUuid(serviceCharacteristicUUID), FullUuid(notifyCharacteristicUUID),
+        notifyBytesEvent);
     }
 
     public void UnsubscribeCharacteristic()
     {
-      bleHandler.Unsubscribe(notifyCharacteristicUUID);
+      peripheralBleHandler.Unsubscribe(
+        FullUuid(serviceCharacteristicUUID),
+        FullUuid(notifyCharacteristicUUID));
+    }
+
+    string FullUuid(string uuid)
+    {
+      string fullUUID = uuid;
+      if (fullUUID.Length == 4)
+        fullUUID = "0000" + uuid + "-0000-1000-8000-00805F9B34FB";
+      return fullUUID;
     }
   }
 }
