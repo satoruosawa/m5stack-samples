@@ -50,7 +50,7 @@ namespace M5BLE
     [SerializeField] CentralBleHandler centralBleHandler = null;
 
     // Settings
-    public string deviceName = "M5Stack BLE Sample";
+    public string deviceName = "M5Stack BLE Sample1";
     float scanTimeout = 10.0f; //sec
 
     // Public variable
@@ -78,6 +78,7 @@ namespace M5BLE
 
     void Reset()
     {
+      Debug.LogWarning("<Reset> Reset " + deviceName);
       state = States.NotFoundPeripheral;
       deviceAddress = null;
       services.Clear();
@@ -104,7 +105,7 @@ namespace M5BLE
       BluetoothLEHardwareInterface.ScanForPeripheralsWithServices(
       null, (address, name) =>
       {
-        if (name.Contains(deviceName))
+        if (name == deviceName)
         {
           BluetoothLEHardwareInterface.StopScan();
           deviceAddress = address;
@@ -179,7 +180,11 @@ namespace M5BLE
           su + "],[" + cu + "]");
       }, (ad) =>
       {
-        Reset();
+        // BUG: When you call DisconnectPeripheral, latest disconnectAction is called.
+        // ex) connect(A) -> connect(B) -> disconnect(A)
+        // Always called NOT disconnectAction(A) but disconnectAction(B).
+
+        // Reset();
         Debug.Log("[" + Time.time +
           "]: <Connect> Callback disconnected action. Address = " + ad);
       });

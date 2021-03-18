@@ -2777,7 +2777,7 @@ GameObject:
   - component: {fileID: 718088568}
   - component: {fileID: 718088569}
   m_Layer: 5
-  m_Name: Root
+  m_Name: Root 1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -6669,7 +6669,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   centralBleHandler: {fileID: 1774413291}
-  deviceName: M5Stack BLE Sample
+  deviceName: M5Stack BLE Sample1
 --- !u!4 &1728849972
 Transform:
   m_ObjectHideFlags: 0
