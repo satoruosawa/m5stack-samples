@@ -3439,7 +3439,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   centralBleHandler: {fileID: 1774413291}
-  deviceName: M5Stack BLE Sample
+  deviceName: M5Stack BLE Sample1
 --- !u!4 &1728849972
 Transform:
   m_ObjectHideFlags: 0
@@ -4192,7 +4192,7 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
-  ugui: {fileID: 314238470}
+  writeTextUgui: {fileID: 314238470}
 --- !u!4 &2061813035
 Transform:
   m_ObjectHideFlags: 0
