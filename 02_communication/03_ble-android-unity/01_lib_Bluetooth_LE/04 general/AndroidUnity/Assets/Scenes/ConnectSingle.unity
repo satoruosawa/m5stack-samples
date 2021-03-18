@@ -4192,7 +4192,7 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
-  ugui: {fileID: 314238470}
+  writeTextUgui: {fileID: 314238470}
 --- !u!4 &2061813035
 Transform:
   m_ObjectHideFlags: 0

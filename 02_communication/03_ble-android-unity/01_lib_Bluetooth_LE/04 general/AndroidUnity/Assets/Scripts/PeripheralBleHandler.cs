@@ -67,7 +67,14 @@ namespace M5BLE
     }
 
     void Update()
-    { if (!IsProcessing() && !centralBleHandler.IsInitialized()) Reset(); }
+    {
+      if (state != States.NotFoundPeripheral && !IsProcessing() &&
+        !centralBleHandler.IsInitialized())
+      {
+        Debug.LogWarning("<Update> Reset.");
+        Reset();
+      }
+    }
 
     void Reset()
     {

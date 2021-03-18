@@ -16,7 +16,7 @@ namespace M5BLE
     [SerializeField] PeripheralBleHandler peripheralBleHandler = null;
     [SerializeField] TextEvent readEvent = new TextEvent();
     [SerializeField] TextEvent notifyEvent = new TextEvent();
-    [SerializeField] TextMeshProUGUI ugui = null;
+    [SerializeField] TextMeshProUGUI writeTextUgui = null;
 
     public void ReadCharacteristic()
     {
@@ -38,7 +38,7 @@ namespace M5BLE
     {
       peripheralBleHandler.WriteCharacteristic(
         FullUuid(serviceCharacteristicUUID), FullUuid(writeCharacteristicUUID),
-        ugui.text);
+        writeTextUgui.text);
     }
 
     public void SubscribeCharacteristic()
